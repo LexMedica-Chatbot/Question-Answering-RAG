@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+    lexmedica-chatbot:
+        container_name: lexmedica-chatbot
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "8080:8080" # host:container
+        env_file:
+            - .env # berisi API_KEY, SUPABASE_URL, dll.
+        restart: unless-stopped
+
+        # Volume mount opsional untuk hot-reload saat development
+        # volumes:
+        #   - ./:/app
+
+        # Jika ingin menggunakan network khusus
+        # networks:
+        #   - pertamina-net
+# networks:
+#   pertamina-net:
+#     driver: bridge

@@ -25,6 +25,11 @@ JENIS_PERATURAN = "UNKNOWN"
 NOMOR_PERATURAN = "-"
 TAHUN_PERATURAN = "-"
 
+# Add this at the beginning of the file, just after the imports
+DEBUG_MODE = True  # Set ke True untuk debug atau False untuk produksi
+AGGRESSIVE_MODE = True  # Mode agresif akan mendeteksi semua kemungkinan pasal
+PRINT_RAW_TEXT = True  # Cetak teks mentah dari PDF untuk debugging
+
 # ---------------------------------------------------------------------------
 # 2. Muat dokumen PDF
 # ---------------------------------------------------------------------------
@@ -33,6 +38,13 @@ loader = PyPDFDirectoryLoader(PDF_DIR)
 pages = loader.load()
 full_text = "\n".join([page.page_content for page in pages])
 print(f"Dokumen berhasil dimuat: {len(pages)} halaman")
+
+# Print raw text untuk debugging jika diperlukan
+if PRINT_RAW_TEXT:
+    print("\n=== RAW TEXT (500 karakter pertama) ===")
+    print(full_text[:500])
+    print("...[terpotong]...")
+    print("=== END RAW TEXT ===\n")
 
 # ---------------------------------------------------------------------------
 # 2.a. Ekstraksi Jenis, Nomor, Tahun Peraturan dari teks
@@ -259,6 +271,65 @@ for raw_line in full_text.splitlines():
     # Bersihkan teks dari kesalahan OCR
     line = clean_text(line)
 
+    # Perbaiki kasus "Pasa1" menjadi "Pasal" (huruf L terbaca sebagai angka 1)
+    if re.search(r"Pasa1\s+\d+", line, re.IGNORECASE):
+        original = line
+        line = re.sub(r"Pasa1", "Pasal", line, flags=re.IGNORECASE)
+        print(f"Memperbaiki OCR Pasa1: {original} -> {line}")
+
+        # Jika baris hanya berisi "Pasa1 X", ini pasti awal pasal baru
+        if re.match(r"^Pasal\s+\d+$", line, re.IGNORECASE):
+            print(f"DETEKSI LANGSUNG: {line} sebagai awal pasal baru")
+            # Simpan pasal lama jika ada
+            if current_pasal and current_lines and in_main_content:
+                content = "\n".join(current_lines).strip()
+                metadata = {
+                    "jenis_peraturan": JENIS_PERATURAN,
+                    "nomor_peraturan": NOMOR_PERATURAN,
+                    "tahun_peraturan": TAHUN_PERATURAN,
+                    "tipe_bagian": current_pasal,
+                    "bagian_dari": "",  # Kosongkan karena tidak ada bab
+                    "judul_peraturan": JUDUL_PERATURAN,
+                }
+                pasal_docs.append(Document(page_content=content, metadata=metadata))
+
+            # Ekstrak nomor pasal
+            pasal_num_match = re.search(r"Pasal\s+(\d+)", line, re.IGNORECASE)
+            if pasal_num_match:
+                pasal_number_str = pasal_num_match.group(1)
+                try:
+                    pasal_number = int(pasal_number_str)
+                    # Mulai pasal baru
+                    current_pasal = f"Pasal {pasal_number_str}"
+                    current_lines = []
+                    last_pasal_number = pasal_number
+                    print(f"DETEKSI BERHASIL: {current_pasal}")
+                    in_main_content = True  # Pastikan kita di bagian utama dokumen
+                    continue
+                except ValueError:
+                    print(f"Gagal konversi nomor pasal: {pasal_number_str}")
+
+    # Perbaiki kasus spasi terpisah seperti "P asal", "Pa sal", dsb
+    if re.match(r"^P\s*a\s*s\s*a\s*l\s+\d+", line, re.IGNORECASE):
+        original = line
+        line = re.sub(r"^P\s*a\s*s\s*a\s*l", "Pasal", line, flags=re.IGNORECASE)
+        print(f"Memperbaiki spasi dalam Pasal: {original} -> {line}")
+
+    # Perbaiki kasus typo umum seperti "Pasai", "Pasasl", "Pasrl", dll
+    if re.match(r"^Pasa[irs]\s+\d+", line, re.IGNORECASE) or re.match(
+        r"^Pasas?l\s+\d+", line, re.IGNORECASE
+    ):
+        original = line
+        line = re.sub(r"^Pasa[irs]", "Pasal", line, flags=re.IGNORECASE)
+        line = re.sub(r"^Pasas?l", "Pasal", line, flags=re.IGNORECASE)
+        print(f"Memperbaiki typo dalam Pasal: {original} -> {line}")
+
+    # Perbaiki kasus format "Artikel N" atau "Article N" (terjemahan dari dokumen asing)
+    if re.match(r"^Ar[tl]i[ck][el][el]?\s+\d+", line, re.IGNORECASE):
+        original = line
+        line = re.sub(r"^Ar[tl]i[ck][el][el]?", "Pasal", line, flags=re.IGNORECASE)
+        print(f"Memperbaiki Artikel/Article: {original} -> {line}")
+
     if not line or re.match(r"^\d+\s*$", line):
         continue
 
@@ -272,6 +343,11 @@ for raw_line in full_text.splitlines():
         # Mulai mengumpulkan 30 baris setelah MEMUTUSKAN untuk debugging
         debug_lines_after_memutuskan = []
         continue
+
+    # Dalam mode debug, kita selalu anggap dalam main content untuk mendeteksi semua pasal
+    if DEBUG_MODE and not in_main_content:
+        in_main_content = True
+        print(f"DEBUG: Mengaktifkan mode main content untuk deteksi semua pasal")
 
     # Kumpulkan 30 baris pertama setelah MEMUTUSKAN untuk debugging
     if in_main_content and len(debug_lines_after_memutuskan) < 30:
@@ -310,6 +386,84 @@ for raw_line in full_text.splitlines():
     # Deteksi PASAL dengan format normal
     pasal_match = re.match(r"^Pasal\s+(\d+[A-Z]?)\s*$", line, re.IGNORECASE)
 
+    # Deteksi KHUSUS "Pasa1 X" yang muncul sebagai baris terisolasi
+    if not pasal_match and re.match(
+        r"^[\s\.]*Pasa1\s+\d+[\s\.]*$", line, re.IGNORECASE
+    ):
+        original = line
+        fixed_line = re.sub(r"Pasa1", "Pasal", line, flags=re.IGNORECASE)
+        pasal_num = re.search(r"Pasa1\s+(\d+)", line, re.IGNORECASE)
+        if pasal_num:
+            pasal_match = re.match(
+                r"^Pasal\s+(\d+)\s*$", f"Pasal {pasal_num.group(1)}", re.IGNORECASE
+            )
+            print(
+                f"KASUS KHUSUS PASA1: {original} -> {pasal_match.group(0) if pasal_match else 'GAGAL'}"
+            )
+
+    # Mode agresif - jika ada "Pasal X" di mana saja dalam baris, anggap sebagai awal pasal baru
+    if AGGRESSIVE_MODE and not pasal_match and not pasal_with_space_match:
+        pasal_in_text = re.search(
+            r"(?<!\w)(Pasa[l1]|P\.|Ps\.|Pasal|Pas\.)\s+(\d+)(?!\w)", line, re.IGNORECASE
+        )
+        if pasal_in_text:
+            try:
+                pasal_number = int(pasal_in_text.group(2))
+                if is_valid_new_pasal(pasal_number, last_pasal_number):
+                    # Simpan pasal lama jika ada
+                    if current_pasal and current_lines and in_main_content:
+                        content = "\n".join(current_lines).strip()
+                        metadata = {
+                            "jenis_peraturan": JENIS_PERATURAN,
+                            "nomor_peraturan": NOMOR_PERATURAN,
+                            "tahun_peraturan": TAHUN_PERATURAN,
+                            "tipe_bagian": current_pasal,
+                            "bagian_dari": "",  # Kosongkan karena tidak ada bab
+                            "judul_peraturan": JUDUL_PERATURAN,
+                        }
+                        pasal_docs.append(
+                            Document(page_content=content, metadata=metadata)
+                        )
+
+                    # Mulai pasal baru
+                    current_pasal = f"Pasal {pasal_number}"
+                    current_lines = []
+                    last_pasal_number = pasal_number
+                    print(f"MODE AGRESIF: Mendeteksi {current_pasal} dari '{line}'")
+
+                    # Extract remaining content in the line after the pasal
+                    content_after_pasal = re.sub(
+                        r".*?(?<!\w)(Pasa[l1]|P\.|Ps\.|Pasal|Pas\.)\s+\d+(?!\w)",
+                        "",
+                        line,
+                        re.IGNORECASE,
+                    )
+                    if content_after_pasal.strip():
+                        current_lines.append(content_after_pasal.strip())
+
+                    continue
+            except ValueError:
+                pass  # Ignore if not a valid number
+
+    # Cek juga format "Pasal X" yang muncul di tengah dokumen tetapi di baris sendiri
+    if (
+        not pasal_match
+        and line.strip()
+        and re.match(r"^[\s\.]*(Pasal\s+\d+[A-Z]?)[\s\.]*$", line, re.IGNORECASE)
+    ):
+        pasal_match = re.search(r"(Pasal\s+\d+[A-Z]?)", line, re.IGNORECASE)
+        if pasal_match:
+            nomor_pasal = re.search(
+                r"Pasal\s+(\d+[A-Z]?)", pasal_match.group(1), re.IGNORECASE
+            )
+            if nomor_pasal:
+                pasal_match = re.match(
+                    r"^Pasal\s+(\d+[A-Z]?)\s*$",
+                    f"Pasal {nomor_pasal.group(1)}",
+                    re.IGNORECASE,
+                )
+                print(f"DETEKSI PASAL TENGAH DOKUMEN: {line} -> {pasal_match.group(0)}")
+
     # Deteksi format pasal alternatif yang mungkin ada di UU Darurat
     alt_pasal_match = (
         re.match(r"^Ps\.\s*(\d+[A-Z]?)\s*$", line, re.IGNORECASE)
@@ -318,13 +472,44 @@ for raw_line in full_text.splitlines():
         # Tambahkan format alternatif baru
         or re.match(r"^Pasal\s+(\d+[A-Z]?)\.?$", line, re.IGNORECASE)
         or re.match(r"^Pasal\s+(\d+[A-Z]?)[,:;].*$", line, re.IGNORECASE)
+        # Format khusus UU Darurat
+        or re.match(
+            r"^P\.?\s*(\d+[A-Z]?)\s*$", line, re.IGNORECASE
+        )  # "P. 1" atau "P 1"
+        or re.match(
+            r"^P(asal|s)?\.?\s*(\d+[A-Z]?)[,:;].*$", line, re.IGNORECASE
+        )  # "P. 1:" atau "P 1:"
+        or re.match(r"^Pas[.,]\s*(\d+[A-Z]?)\s*$", line, re.IGNORECASE)  # "Pas. 1"
+        or re.match(r"^Pas[.,]\s*(\d+[A-Z]?)[,:;].*$", line, re.IGNORECASE)  # "Pas. 1:"
+        or re.match(
+            r"^Psl\.?\s*(\d+[A-Z]?)\s*$", line, re.IGNORECASE
+        )  # "Psl. 1" atau "Psl 1"
+        or re.match(
+            r"^Pasl\.?\s*(\d+[A-Z]?)\s*$", line, re.IGNORECASE
+        )  # "Pasl. 1" atau "Pasl 1"
+        or re.match(
+            r"^Fasa[l1]\s+(\d+[A-Z]?)\s*$", line, re.IGNORECASE
+        )  # "Fasal 1" (error OCR)
     )
 
     if pasal_match or alt_pasal_match:
         # Dapatkan format pasal yang benar
-        pasal_number_str = (pasal_match and pasal_match.group(1)) or (
-            alt_pasal_match and alt_pasal_match.group(1)
-        )
+        pasal_number_str = None
+
+        if pasal_match:
+            pasal_number_str = pasal_match.group(1)
+        elif alt_pasal_match:
+            # Ambil grup hasil match yang sesuai
+            for i in range(1, min(3, len(alt_pasal_match.groups()) + 1)):
+                if (
+                    alt_pasal_match.group(i) is not None
+                    and alt_pasal_match.group(i).strip()
+                ):
+                    pasal_number_str = alt_pasal_match.group(i)
+                    break
+
+        if not pasal_number_str:
+            continue
 
         try:
             pasal_number = int(re.sub(r"[A-Z]", "", pasal_number_str))
@@ -351,8 +536,10 @@ for raw_line in full_text.splitlines():
                     # Mulai pasal baru
                     if pasal_match:
                         current_pasal = f"Pasal {pasal_match.group(1)}"
+                        print(f"Ditemukan format normal: {current_pasal}")
                     else:
-                        current_pasal = f"Pasal {alt_pasal_match.group(1)}"
+                        current_pasal = f"Pasal {pasal_number_str}"
+                        print(f"Ditemukan format alternatif: {line} -> {current_pasal}")
                     current_lines = []
                     last_pasal_number = pasal_number
                     print(f"Ditemukan {current_pasal}")
@@ -399,9 +586,15 @@ print("\n=== DEBUGGING INFO ===")
 print(
     f"Total baris setelah MEMUTUSKAN yang diambil: {len(debug_lines_after_memutuskan)}"
 )
-print("30 baris pertama setelah MEMUTUSKAN:")
-for i, line in enumerate(debug_lines_after_memutuskan[:30]):
-    print(f"{i+1}. {line}")
+if debug_lines_after_memutuskan:
+    print(
+        "30 baris pertama setelah MEMUTUSKAN (lihat di sini format pasal yang digunakan):"
+    )
+    for i, line in enumerate(debug_lines_after_memutuskan[:30]):
+        print(f"{i+1}. {line}")
+else:
+    print("PERINGATAN: Tidak ada konten yang terdeteksi setelah MEMUTUSKAN!")
+print(f"Total pasal yang berhasil dideteksi: {len(pasal_docs)}")
 print("=== END DEBUGGING INFO ===\n")
 
 # Final cleanup - bersihkan semua konten pasal

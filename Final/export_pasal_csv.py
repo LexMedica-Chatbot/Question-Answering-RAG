@@ -40,7 +40,7 @@ print(f"Dokumen berhasil dimuat: {len(pages)} halaman")
 # ---------------------------------------------------------------------------
 
 # Jenis Peraturan (prioritaskan PP dahulu karena dokumen PP tetap memuat kata "Undang-Undang")
-JENIS_PERATURAN = "UU Darurat"
+JENIS_PERATURAN = "Perpres"
 
 # Nomor Peraturan
 nomor_match = re.search(r"NOMOR\s+([0-9A-Z]+)", full_text, re.IGNORECASE)

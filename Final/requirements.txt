@@ -1,0 +1,23 @@
+# FastAPI dan dependensi
+fastapi>=0.104.0
+uvicorn>=0.23.2
+pydantic>=2.4.2
+python-dotenv>=1.0.0
+starlette>=0.27.0
+
+# LangChain dan komponen
+langchain>=0.0.335
+langchain-openai>=0.0.2
+langchain-community>=0.0.10
+langchain-core>=0.1.1
+
+# Supabase 
+supabase>=2.0.3
+
+# OpenAI
+openai>=1.2.0
+
+# Utilitas
+requests>=2.31.0
+typing-inspect>=0.9.0
+typing_extensions>=4.8.0
