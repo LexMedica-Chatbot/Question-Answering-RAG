@@ -166,12 +166,22 @@ def get_vector_store(embedding_model="large"):
     # Dapatkan nama tabel sesuai model
     table_name = EMBEDDING_CONFIG[embedding_model]["table"]
 
+    # Gunakan nama fungsi pencarian yang sesuai berdasarkan model
+    if embedding_model == "small":
+        query_name = "match_documents_small"
+    else:
+        query_name = "match_documents"
+
+    print(
+        f"[DEBUG] Using vector store table: {table_name} with query function: {query_name}"
+    )
+
     # Buat vector store
     return SupabaseVectorStore(
         embedding=embeddings,
         client=supabase,
         table_name=table_name,
-        query_name="match_documents",
+        query_name=query_name,
     )
 
 
@@ -206,19 +216,28 @@ def format_docs(docs):
 def find_document_links(doc_names, embedding_model="large"):
     """Find document links based on document names extracted from retrieved docs"""
     print(f"\n[DEBUG] Searching for document links for: {doc_names}")
+    print(f"[DEBUG] Using embedding model: {embedding_model}")
     document_links = []
 
-    # Get embeddings model
+    # Get embeddings model dengan model yang sesuai
     embeddings = get_embeddings(embedding_model)
+
+    # Gunakan nama fungsi pencarian yang benar berdasarkan model
+    if embedding_model == "small":
+        search_function = "match_document_links_small"
+    else:
+        search_function = "match_document_links"
+
+    print(f"[DEBUG] Using search function: {search_function}")
 
     for doc_name in doc_names:
         try:
             # Generate embedding dari nama dokumen
             query_embedding = embeddings.embed_query(doc_name)
 
-            # Menggunakan fungsi match_document_links untuk mendapatkan dokumen paling mirip
+            # Menggunakan fungsi yang sesuai berdasarkan model
             result = supabase.rpc(
-                "match_document_links", {"query_embedding": query_embedding}
+                search_function, {"query_embedding": query_embedding}
             ).execute()
 
             # Ambil dokumen paling mirip (hasil pertama)
@@ -262,7 +281,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     document_links: List[Dict[str, Any]] = []
-    model_info: Dict[str, str] = {}
+    model_info: Dict[str, Any] = {}  # Ubah dari str ke Any untuk bisa menyimpan angka
     referenced_documents: List[Dict[str, Any]] = (
         []
     )  # Menambahkan informasi dokumen yang direferensikan
@@ -388,7 +407,7 @@ def create_rag_chain(embedding_model="large"):
 async def chat(request: ChatRequest):
     try:
         print(f"\n[DEBUG] Processing chat request: {request.query}")
-        print(f"[DEBUG] Using model: {request.embedding_model}")
+        print(f"[DEBUG] Using embedding model: {request.embedding_model}")
         print(f"[DEBUG] Previous responses: {len(request.previous_responses)}")
 
         # Validasi model
@@ -398,9 +417,17 @@ async def chat(request: ChatRequest):
                 detail=f"Model embedding tidak valid. Harus 'small' atau 'large'",
             )
 
-        # Dapatkan nama tabel
+        # Dapatkan nama tabel dan model
         table_name = EMBEDDING_CONFIG[request.embedding_model]["table"]
+        model_name = EMBEDDING_CONFIG[request.embedding_model]["model"]
         print(f"[DEBUG] Using table: {table_name}")
+        print(f"[DEBUG] Using model: {model_name}")
+
+        # Cek dimensi embedding dari model yang dipilih
+        embeddings = get_embeddings(request.embedding_model)
+        sample_embedding = embeddings.embed_query("Test query for dimension check")
+        embedding_dimensions = len(sample_embedding)
+        print(f"[DEBUG] Current embedding dimensions: {embedding_dimensions}")
 
         # Create RAG chain for the specified model
         rag_chain, retriever, model_name = create_rag_chain(request.embedding_model)
@@ -453,6 +480,7 @@ async def chat(request: ChatRequest):
         model_info = {
             "model": model_name,
             "table": table_name,
+            "dimensions": embedding_dimensions,
         }
 
         return ChatResponse(
