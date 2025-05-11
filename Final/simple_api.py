@@ -125,11 +125,24 @@ Anda adalah asisten informasi dokumen hukum kesehatan, bukan penasihat medis ata
    - Lex posterior derogat legi priori (hukum baru mengalahkan hukum lama)
 4. Berikan definisi istilah hukum kesehatan yang penting jika relevan dengan pertanyaan
 
+# PENANGANAN STATUS PERATURAN (BERLAKU vs DICABUT)
+1. Konteks akan berisi dokumen dari peraturan dengan status "berlaku" dan "dicabut"
+2. PRIORITASKAN informasi dari dokumen berstatus "berlaku" dalam memberikan jawaban
+3. Jika ada kontradiksi antara dokumen "berlaku" dan "dicabut", gunakan dokumen yang "berlaku"
+4. Anda BOLEH mereferensikan dokumen yang sudah "dicabut" untuk:
+   - Memberikan konteks historis perkembangan regulasi
+   - Menjelaskan perubahan regulasi dari waktu ke waktu
+   - Membandingkan peraturan lama dan baru bila relevan
+5. SELALU sebutkan status peraturan saat Anda merujuk ke suatu dokumen, misalnya:
+   - "Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 32, ..."
+   - "Menurut UU No. 36 Tahun 2009 (dicabut) pada saat itu mengatur bahwa..."
+6. Prioritaskan menyimpulkan berdasarkan peraturan terbaru yang masih berlaku
+
 # INSTRUKSI PENTING
 1. Jika pertanyaan di luar ruang lingkup atau tidak pantas, tolak dengan sopan dan sarankan untuk mengajukan pertanyaan terkait dokumen hukum kesehatan Indonesia.
 2. Jangan menyertakan URL, referensi internal, atau nomor halaman dalam jawaban Anda.
-3. SELALU mulai jawaban Anda dengan menyebutkan sumber peraturan yang relevan, misalnya: "Berdasarkan PP No. 28 Tahun 2024 Pasal 32, ..." atau "Menurut UU No. 36 Tahun 2009 Pasal 128, ..."
-4. Jika menggunakan beberapa sumber, sebutkan sumber-sumber utama di awal jawaban Anda, misalnya: "Berdasarkan PP No. 28 Tahun 2024 Pasal 24, 28, dan 32, serta UU No. 36 Tahun 2009 Pasal 128, ..."
+3. SELALU mulai jawaban Anda dengan menyebutkan sumber peraturan yang relevan, termasuk statusnya, misalnya: "Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 32, ..." atau "Menurut UU No. 36 Tahun 2009 (dicabut) Pasal 128, ..."
+4. Jika menggunakan beberapa sumber, sebutkan sumber-sumber utama di awal jawaban Anda, misalnya: "Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 24, 28, dan 32, serta UU No. 36 Tahun 2009 (dicabut) Pasal 128, ..."
 5. Jangan pernah berhalusinasi atau membuat informasi yang tidak ada dalam dokumen.
 6. Jika Anda tidak yakin, katakan bahwa informasi tersebut tidak ditemukan dalam dokumen yang tersedia.
 7. JANGAN memberikan saran medis, diagnosa penyakit, atau rekomendasi pengobatan.
@@ -195,6 +208,9 @@ def format_docs(docs):
         nomor_peraturan = doc.metadata.get("nomor_peraturan", "")
         tahun_peraturan = doc.metadata.get("tahun_peraturan", "")
         tipe_bagian = doc.metadata.get("tipe_bagian", "")
+        status = doc.metadata.get(
+            "status", "berlaku"
+        )  # Default ke "berlaku" jika tidak ada
 
         # Buat header dokumen yang informatif untuk membantu model mengetahui sumbernya
         doc_header = f"Dokumen #{i+1}"
@@ -205,6 +221,9 @@ def format_docs(docs):
             )
             if tipe_bagian:
                 doc_header += f" {tipe_bagian}"
+            # Tambahkan status di header dokumen
+            doc_header += f", Status: {status})"
+        else:
             doc_header += ")"
 
         # Format dokumen dengan header yang lebih informatif
@@ -308,6 +327,9 @@ def extract_document_info(docs):
         tahun_peraturan = doc.metadata.get("tahun_peraturan", "")
         tipe_bagian = doc.metadata.get("tipe_bagian", "")
         judul_peraturan = doc.metadata.get("judul_peraturan", "")
+        status = doc.metadata.get(
+            "status", "berlaku"
+        )  # Default ke "berlaku" jika tidak ada
 
         # Buat nama dokumen urutan (sesuai permintaan)
         doc_name = f"Dokumen #{i+1}"
@@ -319,6 +341,8 @@ def extract_document_info(docs):
             )
             if tipe_bagian:
                 doc_description += f" {tipe_bagian}"
+            # Tambahkan status
+            doc_description += f" (Status: {status})"
         elif title:
             doc_description = title
         elif filename:
@@ -338,7 +362,7 @@ def extract_document_info(docs):
         else:
             # Buat source deskriptif dari metadata yang tersedia
             doc_source = (
-                f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan}"
+                f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan} (Status: {status})"
                 if jenis_peraturan and nomor_peraturan and tahun_peraturan
                 else "Metadata tidak lengkap"
             )

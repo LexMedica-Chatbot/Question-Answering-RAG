@@ -8,6 +8,7 @@ import json
 import time
 import psutil
 import asyncio
+import platform
 import aiohttp
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,10 @@ from supabase import create_client, Client
 
 # load environment variables
 load_dotenv()
+
+# Menambahkan configurasi untuk mengatasi "Event loop is closed" error di Windows
+if platform.system() == "Windows":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # initialize supabase db
 supabase_url: str = os.getenv("SUPABASE_URL")
@@ -151,7 +156,7 @@ async def process_csv_to_db(
 
 def main():
     # Path to CSV files
-    csv_folder = "output"
+    csv_folder = "output"  # Path folder output ada di dalam folder Final
     csv_files = [f for f in os.listdir(csv_folder) if f.endswith(".csv")]
 
     if not csv_files:

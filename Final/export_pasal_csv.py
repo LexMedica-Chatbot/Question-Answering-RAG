@@ -40,7 +40,7 @@ print(f"Dokumen berhasil dimuat: {len(pages)} halaman")
 # ---------------------------------------------------------------------------
 
 # Jenis Peraturan (prioritaskan PP dahulu karena dokumen PP tetap memuat kata "Undang-Undang")
-JENIS_PERATURAN = "Perpres"
+JENIS_PERATURAN = "UU"
 
 # Nomor Peraturan
 nomor_match = re.search(r"NOMOR\s+([0-9A-Z]+)", full_text, re.IGNORECASE)
@@ -370,6 +370,7 @@ for raw_line in full_text.splitlines():
                         "tipe_bagian": current_pasal,
                         "bagian_dari": current_bab,
                         "judul_peraturan": JUDUL_PERATURAN,
+                        "status": "berlaku",
                     }
                     pasal_docs.append(Document(page_content=content, metadata=metadata))
 
@@ -423,6 +424,7 @@ if current_pasal and current_lines:
         "tipe_bagian": current_pasal,
         "bagian_dari": current_bab,
         "judul_peraturan": JUDUL_PERATURAN,
+        "status": "berlaku",
     }
     pasal_docs.append(Document(page_content=content, metadata=metadata))
 

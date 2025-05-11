@@ -290,6 +290,7 @@ for raw_line in full_text.splitlines():
                     "tipe_bagian": current_pasal,
                     "bagian_dari": "",  # Kosongkan karena tidak ada bab
                     "judul_peraturan": JUDUL_PERATURAN,
+                    "status": "berlaku",
                 }
                 pasal_docs.append(Document(page_content=content, metadata=metadata))
 
@@ -420,6 +421,7 @@ for raw_line in full_text.splitlines():
                             "tipe_bagian": current_pasal,
                             "bagian_dari": "",  # Kosongkan karena tidak ada bab
                             "judul_peraturan": JUDUL_PERATURAN,
+                            "status": "berlaku",
                         }
                         pasal_docs.append(
                             Document(page_content=content, metadata=metadata)
@@ -528,6 +530,7 @@ for raw_line in full_text.splitlines():
                             "tipe_bagian": current_pasal,
                             "bagian_dari": "",  # Kosongkan karena tidak ada bab
                             "judul_peraturan": JUDUL_PERATURAN,
+                            "status": "berlaku",
                         }
                         pasal_docs.append(
                             Document(page_content=content, metadata=metadata)
@@ -613,6 +616,7 @@ if current_pasal and current_lines:
         "tipe_bagian": current_pasal,
         "bagian_dari": "",  # Kosongkan karena tidak ada bab
         "judul_peraturan": JUDUL_PERATURAN,
+        "status": "berlaku",
     }
     pasal_docs.append(Document(page_content=content, metadata=metadata))
 
