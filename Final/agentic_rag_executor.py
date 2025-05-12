@@ -74,7 +74,16 @@ EMBEDDING_CONFIG = {
 }
 
 # Initialize LLM with context window large enough for document processing
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+# Definisikan konfigurasi model
+MODELS = {
+    "MAIN": {"model": "gpt-4.1-mini", "temperature": 0.2},
+    # gabungkan refiner + evaluator:
+    "REF_EVAL": {"model": "gpt-4.1-nano", "temperature": 0.25},
+    "GENERATOR": {"model": "gpt-4o-mini", "temperature": 0.2},
+}
+
+# Initialize LLM dengan model utama
+llm = ChatOpenAI(**MODELS["MAIN"])
 
 # ======================= UTILITY FUNCTIONS =======================
 
@@ -191,53 +200,12 @@ def extract_document_info(docs):
 
 def find_document_links(doc_names, embedding_model="large"):
     """Find document links based on document names"""
-    document_links = []
+    # Fungsi ini tetap sebagai placeholder
+    # Tidak lagi menggunakan document_mapping hardcoded
+    print(f"[DEBUG] Referensi dokumen: {doc_names}")
 
-    try:
-        print(f"[DEBUG] Mencari link untuk dokumen: {doc_names}")
-
-        # Karena match_document_links tidak tersedia, gunakan pendekatan yang sederhana
-        # Tanpa memanggil fungsi Supabase yang tidak ada
-
-        # Buat mapping manual untuk dokumen-dokumen
-        document_mapping = {
-            "PP No. 36 Tahun 2009": {
-                "document_name": "Peraturan Pemerintah Nomor 36 Tahun 2009 tentang Kesehatan",
-                "document_link": "https://peraturan.bpk.go.id/Home/Details/4986/pp-no-36-tahun-2009",
-            },
-            "PP No. 61 Tahun 2014": {
-                "document_name": "Peraturan Pemerintah Nomor 61 Tahun 2014 tentang Kesehatan Reproduksi",
-                "document_link": "https://peraturan.bpk.go.id/Home/Details/5548/pp-no-61-tahun-2014",
-            },
-            "PP No. 28 Tahun 2024": {
-                "document_name": "Peraturan Pemerintah Nomor 28 Tahun 2024 tentang Kesehatan",
-                "document_link": "https://peraturan.bpk.go.id/Home/Details/243856/pp-no-28-tahun-2024",
-            },
-            "UU No. 36 Tahun 2009": {
-                "document_name": "Undang-Undang Nomor 36 Tahun 2009 tentang Kesehatan",
-                "document_link": "https://peraturan.bpk.go.id/Home/Details/38778/uu-no-36-tahun-2009",
-            },
-        }
-
-        for doc_name in doc_names:
-            # Cari dokumen berdasarkan nama
-            for key in document_mapping:
-                if key in doc_name:
-                    link_info = document_mapping[key]
-                    # Periksa duplikat
-                    already_exists = any(
-                        existing["document_link"] == link_info["document_link"]
-                        for existing in document_links
-                    )
-
-                    if not already_exists:
-                        document_links.append(link_info)
-                    break
-
-        return document_links
-    except Exception as e:
-        print(f"[ERROR] Error finding document links: {str(e)}")
-        return []
+    # Return array kosong karena tidak ada mapping hardcoded
+    return []
 
 
 def extract_legal_entities(docs):
@@ -283,6 +251,8 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
     """
     try:
         print(f"\n[TOOL] Searching for documents with query: {query}")
+
+        # Gunakan vector store dari global cache
         vector_store = get_vector_store(embedding_model)
         retriever = vector_store.as_retriever(search_kwargs={"k": limit})
 
@@ -317,7 +287,7 @@ def refine_query(original_query: str, reason: str = "") -> str:
         print(f"[TOOL] Reason for refinement: {reason}")
 
         # Use LLM to refine the query
-        refiner = ChatOpenAI(model="gpt-3.5-turbo", temperature=0.3)
+        refiner = ChatOpenAI(**MODELS["REF_EVAL"])
 
         refiner_prompt = f"""Sebagai asisten informasi hukum kesehatan Indonesia, sempurnakan query pencarian berikut untuk mendapatkan dokumen yang lebih relevan dan akurat.
 
@@ -347,18 +317,16 @@ Berikan HANYA query yang sudah disempurnakan, tanpa penjelasan tambahan."""
         refined_query = result.content.strip().replace('"', "").replace("'", "")
 
         # Jika query eksplisit tentang peraturan yang sudah dicabut, tetap pertahankan konteks tersebut
-        if any(
-            term in original_query.lower()
-            for term in [
-                "dicabut",
-                "tidak berlaku",
-                "sebelumnya",
-                "lama",
-                "historis",
-                "dulu",
-                "dahulu",
-            ]
-        ):
+        historical_terms = [
+            "dicabut",
+            "tidak berlaku",
+            "sebelumnya",
+            "lama",
+            "historis",
+            "dulu",
+            "dahulu",
+        ]
+        if any(term in original_query.lower() for term in historical_terms):
             # Jika memang tentang peraturan lama, pastikan konteks ini tetap ada
             pass
         # Jika query tidak eksplisit tentang peraturan lama dan refined_query tidak menyebutkan status
@@ -414,8 +382,28 @@ def evaluate_documents(documents: str, query: str) -> str:
             f"[TOOL] Document evaluation - Doc count: {doc_count}, Berlaku: {berlaku_count}, Dicabut: {dicabut_count}"
         )
 
+        # Cek heuristik tambahan sebelum memanggil LLM
+        # Jika query jelas membutuhkan peraturan terkini dan hanya ada yang dicabut
+        need_current_info = any(
+            term in query.lower()
+            for term in [
+                "terbaru",
+                "saat ini",
+                "sekarang",
+                "terkini",
+                "berlaku",
+                "yang masih berlaku",
+                "yang masih digunakan",
+                "peraturan baru",
+            ]
+        )
+
+        if need_current_info and berlaku_count == 0 and dicabut_count > 0:
+            return "KURANG MEMADAI: Hanya ditemukan peraturan yang sudah dicabut, sementara query membutuhkan informasi peraturan yang masih berlaku."
+
         # Use LLM to evaluate document adequacy for the query
-        evaluator = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        evaluator = ChatOpenAI(**MODELS["REF_EVAL"])
+
         evaluation_prompt = f"""Evaluasi SECARA OBJEKTIF apakah kumpulan dokumen berikut memberikan informasi YANG MEMADAI untuk menjawab query:
 
 Query: {query}
@@ -439,27 +427,16 @@ Jawaban harus singkat dan langsung ke poin utama!"""
 
         # Heuristik tambahan: jika evaluasi menyatakan MEMADAI tapi tidak ada dokumen yang berlaku
         # dan query membutuhkan peraturan terkini, maka override menjadi KURANG MEMADAI
-        if "MEMADAI" in evaluation and berlaku_count == 0 and dicabut_count > 0:
-            # Periksa jika query membutuhkan informasi terkini/terbaru
-            need_current_info = any(
-                term in query.lower()
-                for term in [
-                    "terbaru",
-                    "saat ini",
-                    "sekarang",
-                    "terkini",
-                    "berlaku",
-                    "yang masih berlaku",
-                    "yang masih digunakan",
-                    "peraturan baru",
-                ]
+        if (
+            "MEMADAI" in evaluation
+            and berlaku_count == 0
+            and dicabut_count > 0
+            and need_current_info
+        ):
+            evaluation = "KURANG MEMADAI: Hanya ditemukan peraturan yang sudah dicabut, sementara query membutuhkan informasi peraturan yang masih berlaku."
+            print(
+                f"[TOOL] Overriding evaluation due to missing current regulations: {evaluation}"
             )
-
-            if need_current_info:
-                evaluation = "KURANG MEMADAI: Hanya ditemukan peraturan yang sudah dicabut, sementara query membutuhkan informasi peraturan yang masih berlaku."
-                print(
-                    f"[TOOL] Overriding evaluation due to missing current regulations: {evaluation}"
-                )
 
         return evaluation
     except Exception as e:
@@ -468,18 +445,34 @@ Jawaban harus singkat dan langsung ke poin utama!"""
 
 
 @tool
-def generate_answer(documents: str, query: str) -> str:
+def generate_answer(documents: str, query: str = None) -> str:
     """
     Menghasilkan jawaban berdasarkan dokumen yang ditemukan.
 
     Args:
         documents: String berisi dokumen hasil pencarian
-        query: Query yang perlu dijawab
+        query: Query yang perlu dijawab (opsional, dapat dideteksi dari dokumen jika tidak diberikan)
 
     Returns:
         Jawaban lengkap berdasarkan dokumen
     """
     try:
+        # Coba ekstrak query dari dokumen jika tidak diberikan
+        if not query:
+            print(f"\n[TOOL] Query tidak diberikan, mencoba ekstrak dari dokumen")
+            # Ekstrak query dari dokumen jika mungkin - cari baris yang berisi "Query:"
+            document_lines = documents.split("\n")
+            for i, line in enumerate(document_lines):
+                if "Query:" in line or "Pertanyaan:" in line:
+                    query = line.split(":", 1)[1].strip()
+                    print(f"[TOOL] Berhasil ekstrak query: {query}")
+                    break
+
+            # Jika masih tidak ada query, gunakan default
+            if not query:
+                query = "Informasi tentang peraturan kesehatan"
+                print(f"[TOOL] Menggunakan query default: {query}")
+
         print(f"\n[TOOL] Generating answer for query: {query}")
 
         if (
@@ -490,7 +483,6 @@ def generate_answer(documents: str, query: str) -> str:
             return "Mohon maaf, tidak ada informasi yang cukup dalam database kami untuk menjawab pertanyaan Anda. Silakan coba pertanyaan lain atau hubungi admin sistem untuk informasi lebih lanjut."
 
         # Extract entities from documents - contoh pola sederhana untuk entitas hukum
-        # Tanpa menggunakan fungsi extract_legal_entities
         legal_entities = []
         patterns = [
             r"(?:Undang-Undang|UU)(?:\s+Nomor|\s+No\.?)?(?:\s+\d+(?:/\d+)?)?(?:\s+Tahun\s+\d{4})?",
@@ -510,8 +502,8 @@ def generate_answer(documents: str, query: str) -> str:
 
         entities_str = ", ".join(legal_entities)
 
-        # Generate answer - panggil LLM langsung tanpa chain
-        generator = ChatOpenAI(model="gpt-4o-mini", temperature=0.2)
+        # Generate answer - panggil LLM
+        generator = ChatOpenAI(**MODELS["GENERATOR"])
 
         generator_prompt = f"""# PERAN DAN PEMBATASAN (Framework COSTAR)
 
@@ -650,22 +642,25 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+# Initialize memory with reuse capability across invocations
 memory = ConversationBufferMemory(
     memory_key="chat_history",
     return_messages=True,
-    output_key="output",  # Tetapkan output_key secara eksplisit
+    output_key="output",
 )
 
-# Buat agent langsung tanpa perlu menggunakan format_to_openai_tool_messages
+# Buat agent dengan parameter optimize= untuk performa
 agent = create_openai_tools_agent(llm, tools, prompt)
 
+# Create agent executor with faster execution settings
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
     memory=memory,
-    verbose=True,
+    verbose=False,  # Kurangi logging untuk kecepatan
     handle_parsing_errors=True,
     return_intermediate_steps=True,
+    max_execution_time=60,  # Batasi waktu eksekusi maksimum (dalam detik)
 )
 
 # ======================= API MODELS =======================
@@ -675,7 +670,6 @@ class AgenticRequest(BaseModel):
     query: str
     embedding_model: Literal["small", "large"] = "large"
     conversation_id: Optional[str] = None
-    debug_mode: bool = False
 
 
 class StepInfo(BaseModel):
@@ -723,6 +717,40 @@ async def agentic_chat(request: AgenticRequest):
         answer = result["output"]
         print(f"\n[API] Agent output: {answer[:100]}...")
 
+        # Fungsi helper untuk ekstraksi dokumen dari hasil pencarian
+        def parse_search_results(search_result_text):
+            docs_list = []
+            doc_names_extracted = []
+
+            # Jika tidak ada hasil
+            if "Tidak ditemukan dokumen" in search_result_text:
+                return docs_list, doc_names_extracted
+
+            # Parsing dengan regex
+            doc_pattern = re.compile(r"(Dokumen #\d+.*?)(?=Dokumen #\d+|\Z)", re.DOTALL)
+            doc_matches = doc_pattern.findall(search_result_text)
+
+            for doc_text in doc_matches:
+                lines = doc_text.strip().split("\n")
+                if not lines:
+                    continue
+
+                header = lines[0]
+                content = "\n".join(lines[1:]).strip()
+
+                if not content:
+                    continue
+
+                docs_list.append({"header": header, "content": content})
+
+                # Ekstrak nama dokumen untuk links
+                if "(" in header and ")" in header:
+                    doc_name = header.split("(")[1].split(")")[0]
+                    if doc_name and doc_name not in doc_names_extracted:
+                        doc_names_extracted.append(doc_name)
+
+            return docs_list, doc_names_extracted
+
         # Extract document links by analyzing the agent steps
         doc_names = []
         referenced_documents = []
@@ -734,71 +762,50 @@ async def agentic_chat(request: AgenticRequest):
 
             # Collect documents from search_documents tool calls
             if tool_name == "search_documents" and isinstance(step[1], str):
-                if "Tidak ditemukan dokumen" not in step[1]:
-                    # Parse the documents from the formatted output
-                    docs_list = []
-                    current_doc = ""
-                    current_header = ""
+                docs_list, extracted_names = parse_search_results(step[1])
+                all_docs.extend(docs_list)
+                doc_names.extend(
+                    [name for name in extracted_names if name not in doc_names]
+                )
 
-                    for line in step[1].split("\n"):
-                        if line.startswith("Dokumen #"):
-                            if current_doc and current_header:
-                                docs_list.append(
-                                    {
-                                        "header": current_header,
-                                        "content": current_doc.strip(),
-                                    }
-                                )
-                                # Extract document name for links
-                                if "(" in current_header and ")" in current_header:
-                                    doc_name = current_header.split("(")[1].split(")")[
-                                        0
-                                    ]
-                                    if doc_name not in doc_names:
-                                        doc_names.append(doc_name)
-                            current_header = line
-                            current_doc = ""
-                        else:
-                            current_doc += line + "\n"
+        # Create referenced_documents in the right format - lebih efisien
+        unique_docs = {}  # untuk menghindari duplikasi
 
-                    if current_doc and current_header:
-                        docs_list.append(
-                            {"header": current_header, "content": current_doc.strip()}
-                        )
-                        # Extract document name for links
-                        if "(" in current_header and ")" in current_header:
-                            doc_name = current_header.split("(")[1].split(")")[0]
-                            if doc_name not in doc_names:
-                                doc_names.append(doc_name)
-
-                    # Add to all docs for referenced_documents
-                    all_docs.extend(docs_list)
-
-        # Create referenced_documents in the right format
         for i, doc in enumerate(all_docs):
-            doc_info = {
-                "name": f"Dokumen #{i+1}",
-                "description": doc["header"]
-                .replace(f"Dokumen #{i+1}", "")
-                .strip()
-                .strip("()"),
-                "source": doc["header"],
-                "content": doc["content"],
-                "metadata": {},
-            }
-            referenced_documents.append(doc_info)
+            doc_id = f"Dokumen #{i+1}"
+            if doc_id not in unique_docs:
+                doc_info = {
+                    "name": doc_id,
+                    "description": doc["header"]
+                    .replace(doc_id, "")
+                    .strip()
+                    .strip("()"),
+                    "source": doc["header"],
+                    "content": doc["content"],
+                    "metadata": {},
+                }
+                unique_docs[doc_id] = doc_info
 
-        # Find document links
+        referenced_documents = list(unique_docs.values())
+
+        # Find document links - pengecekan dokumen unik sudah dilakukan dalam parse_search_results
         document_links = find_document_links(
             doc_names, embedding_model=request.embedding_model
         )
 
         # Extract citations from answer
         citations = []
-        citation_pattern = r"\[Dok#(\d+)\]"
-        citation_matches = re.findall(citation_pattern, answer)
+        citation_pattern = re.compile(r"\[Dok#(\d+)\]")
+        citation_matches = citation_pattern.findall(answer)
+
+        # Tracking citations yang sudah diproses untuk menghindari duplikat
+        processed_citations = set()
 
         for match in citation_matches:
+            if match in processed_citations:
+                continue
+
+            processed_citations.add(match)
             doc_idx = int(match) - 1
             if 0 <= doc_idx < len(all_docs):
                 citation = CitationInfo(
@@ -812,19 +819,23 @@ async def agentic_chat(request: AgenticRequest):
                 )
                 citations.append(citation)
 
-        # Format agent steps for debug mode
-        agent_steps = None
-        if request.debug_mode:
-            agent_steps = []
-            for step in result["intermediate_steps"]:
-                step_info = StepInfo(
-                    tool=step[0].tool,
-                    tool_input=step[0].tool_input,
-                    tool_output=(
-                        step[1][:500] + "..." if len(step[1]) > 500 else step[1]
-                    ),
-                )
-                agent_steps.append(step_info)
+        # Format agent steps - debug_mode selalu true
+        agent_steps = []
+        for step in result["intermediate_steps"]:
+            # Tambahkan pengecekan untuk menghindari step yang error
+            if not hasattr(step[0], "tool") or not hasattr(step[0], "tool_input"):
+                continue
+
+            output_text = step[1] if isinstance(step[1], str) else str(step[1])
+
+            step_info = StepInfo(
+                tool=step[0].tool,
+                tool_input=step[0].tool_input,
+                tool_output=(
+                    output_text[:500] + "..." if len(output_text) > 500 else output_text
+                ),
+            )
+            agent_steps.append(step_info)
 
         # Calculate processing time
         end_time = time.time()

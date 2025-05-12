@@ -19,7 +19,7 @@ load_dotenv()
 
 # Sesuaikan jika folder PDF Anda berbeda
 PDF_DIR = "documents"
-OUTPUT_CSV = "pasal_output.csv"
+OUTPUT_CSV = "output/pasal_output.csv"
 
 # Placeholder, akan diisi otomatis setelah parsing header dokumen
 JENIS_PERATURAN = "UNKNOWN"
@@ -40,7 +40,7 @@ print(f"Dokumen berhasil dimuat: {len(pages)} halaman")
 # ---------------------------------------------------------------------------
 
 # Jenis Peraturan (prioritaskan PP dahulu karena dokumen PP tetap memuat kata "Undang-Undang")
-JENIS_PERATURAN = "UU"
+JENIS_PERATURAN = "PP"
 
 # Nomor Peraturan
 nomor_match = re.search(r"NOMOR\s+([0-9A-Z]+)", full_text, re.IGNORECASE)
@@ -75,8 +75,66 @@ def clean_text(text):
     """
     Membersihkan teks dari kesalahan umum OCR pada dokumen perundangan
     """
+    # Perbaikan kesalahan OCR pada kata "Pasal"
+    # Menangani: "Pasat", "Pasai", "Pasul", "Pasol", "Pasai", "Fasai", "FasaI", "Pasa-l", "Pasa1", "Pasd", "PasaJ", dll
+    cleaned = re.sub(
+        r"(Pas[a-z]-?[a-zl1]|Pas[a-z]?[0-9]|Fas[a-z][Il1J]|Pasa[J1-])\s+(\d+)",
+        r"Pasal \2",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Menangani jika ada yang tidak memiliki spasi setelah kata "Pasal" yang salah
+    cleaned = re.sub(
+        r"(Pas[a-z]-?[a-zl1]|Pas[a-z]?[0-9]|Fas[a-z][Il1J]|Pasa[J1-])(\d+)",
+        r"Pasal \2",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # Menangani kasus pasal dengan titik di akhir seperti "Pasal 1."
+    cleaned = re.sub(
+        r"^(Pasal\s+\d+)\.$",
+        r"\1",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # Menangani format dengan huruf "J" atau spasi di tengah angka
+    cleaned = re.sub(
+        r"PasaJ(\d+[O0]\d+)",
+        lambda m: f"Pasal {m.group(1).replace('O', '0')}",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # Menangani spasi di tengah nomor pasal (contoh: "Pasal 21 I" -> "Pasal 211")
+    cleaned = re.sub(
+        r"Pasal\s+(\d+)\s+([I1])(\s|$)",
+        r"Pasal \1\2",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
+    # Tambahan khusus untuk kasus dengan spasi dan huruf I
+    if re.search(r"Pasal\s+\d+I$", cleaned):
+        cleaned = re.sub(
+            r"Pasal\s+(\d+)I$",
+            r"Pasal \g<1>1",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+    # Menangani "Pasa[angka][angka][angka]" (contoh: "Pasa772" -> "Pasal 72")
+    cleaned = re.sub(
+        r"Pasa(\d)(\d+)",
+        r"Pasal \2",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
     # Pembersihan ayat: "(21 " -> "(2)"
-    cleaned = re.sub(r"\((\d)1\s", r"(\1)", text)
+    cleaned = re.sub(r"\((\d)1\s", r"(\1)", cleaned)
 
     # Pembersihan ayat: "(11 " -> "(1)"
     cleaned = re.sub(r"\(1{2,}\s", r"(1)", cleaned)
@@ -87,6 +145,8 @@ def clean_text(text):
 
     # Perbaikan angka 0 dan O
     cleaned = re.sub(r"([a-zA-Z])0([a-zA-Z])", r"\1O\2", cleaned)
+    # Perbaikan untuk angka: ubah O di antara digit menjadi 0
+    cleaned = re.sub(r"(\d)O(\d)", lambda m: f"{m.group(1)}0{m.group(2)}", cleaned)
 
     # Perbaikan spasi berlebih
     cleaned = re.sub(r"\s{2,}", " ", cleaned)
@@ -280,6 +340,19 @@ for raw_line in full_text.splitlines():
 
     # Bersihkan teks dari kesalahan OCR
     line = clean_text(line)
+
+    # Cek kemungkinan baris dimulai dengan variasi "Pasal" yang salah OCR
+    if re.match(
+        r"^(Pas[a-z]t|Pas[a-z][il]|Fas[a-z][Il])\s*\d+", line, re.IGNORECASE
+    ) and not re.match(r"^Pasal\s+", line, re.IGNORECASE):
+        original = line
+        line = re.sub(
+            r"^(Pas[a-z]t|Pas[a-z][il]|Fas[a-z][Il])(\s*)(\d+)",
+            r"Pasal\2\3",
+            line,
+            flags=re.IGNORECASE,
+        )
+        print(f"Memperbaiki kesalahan OCR pada pasal: {original} -> {line}")
 
     if not line or re.match(r"^\d+\s*$", line):
         continue

@@ -73,7 +73,7 @@ EMBEDDING_CONFIG = {
 }
 
 # Initialize LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0, streaming=True)
+llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0, streaming=True)
 
 # Create the custom prompt
 custom_prompt = ChatPromptTemplate.from_messages(
