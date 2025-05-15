@@ -21,14 +21,14 @@ PDF_DIR = "documents"
 OUTPUT_CSV = "output/pasal_output_tanpa_bab.csv"
 
 # Placeholder, akan diisi otomatis setelah parsing header dokumen
-JENIS_PERATURAN = "UNKNOWN"
+JENIS_PERATURAN = "Perpres"
 NOMOR_PERATURAN = "-"
 TAHUN_PERATURAN = "-"
 
 # Add this at the beginning of the file, just after the imports
-DEBUG_MODE = True  # Set ke True untuk debug atau False untuk produksi
-AGGRESSIVE_MODE = True  # Mode agresif akan mendeteksi semua kemungkinan pasal
-PRINT_RAW_TEXT = True  # Cetak teks mentah dari PDF untuk debugging
+DEBUG_MODE = False  # Set ke True untuk debug atau False untuk produksi
+AGGRESSIVE_MODE = False  # Mode agresif akan mendeteksi semua kemungkinan pasal
+PRINT_RAW_TEXT = False  # Cetak teks mentah dari PDF untuk debugging
 
 # Nonaktifkan mode agresif ONLY di preambule
 AGGRESSIVE_MODE_PREAMBULE = False  # Jangan deteksi agresif di preambule
@@ -315,10 +315,23 @@ for i, line in enumerate(lines):
     line = line.strip()
     if re.match(r"^(MEMUTUSKAN|Memutuskan)[\s:;]*$", line, re.IGNORECASE):
         memutuskan_index = i
-    elif re.match(r"^(MENETAPKAN|Menetapkan)[\s:;]*$", line, re.IGNORECASE):
+    elif re.match(r"^(MENETAPKAN|Menetapkan)\s*[:;]?\s*$", line, re.IGNORECASE):
         menetapkan_index = i
-    elif re.match(r"^Pasal\s+1\s*\.?\s*$", line, re.IGNORECASE):
+    # Deteksi Pasal 1 dengan berbagai format yang mungkin
+    elif (
+        re.match(r"^Pasal\s+1\s*\.?\s*$", line, re.IGNORECASE)
+        or re.match(r"^Pasal\s+1\s*[:;]", line, re.IGNORECASE)
+        or re.match(
+            r"^Pasal\s+1\s+[\(\[]", line, re.IGNORECASE
+        )  # Pasal 1 (1) atau Pasal 1 [1]
+        or re.match(
+            r"^BAB\s+I\s*\n\s*Pasal\s+1",
+            line + "\n" + (lines[i + 1].strip() if i + 1 < len(lines) else ""),
+            re.IGNORECASE,
+        )
+    ):
         pasal1_index = i
+        print(f"Ditemukan Pasal 1 pada baris {i}: '{line}'")
         break
 
 # Tentukan di mana bagian utama dokumen dimulai
@@ -382,6 +395,8 @@ if DEBUG_MODE:
 
 # Loop untuk parsing
 line_number = 0
+found_pasal_1 = False  # Flag khusus untuk menandai bahwa Pasal 1 telah ditemukan
+
 for raw_line in full_text.splitlines():
     line_number += 1
     line = raw_line.strip()
@@ -392,14 +407,34 @@ for raw_line in full_text.splitlines():
     if not line or re.match(r"^\d+\s*$", line):
         continue
 
-    # Jika kita belum melewati preambule dan tidak dalam mode debug, lewati baris ini
-    if not DEBUG_MODE and line_number < preambule_end_index:
+    # Jika kita belum melewati preambule, lewati baris ini
+    if line_number < preambule_end_index:
+        # Jika DEBUG_MODE aktif, cetak info untuk debugging
+        if DEBUG_MODE and "pasal" in line.lower() and "mengingat" in line.lower():
+            print(f"DEBUG: Melewati baris preambule (Mengingat Pasal): '{line}'")
         continue
 
     # Jika kita baru saja melewati preambule, aktifkan flag in_main_content
     if line_number == preambule_end_index:
         in_main_content = True
         print(f"Mulai memproses konten utama pada baris {line_number}: '{line}'")
+
+    # Deteksi khusus untuk Pasal 1 yang mungkin terlewat
+    pasal1_match = re.match(r"^Pasal\s+1\b", line, re.IGNORECASE)
+    if in_main_content and pasal1_match and not found_pasal_1 and not current_pasal:
+        # Deteksi Pasal 1 pertama setelah preambule
+        current_pasal = "Pasal 1"
+        current_lines = []
+        last_pasal_number = 1
+        found_pasal_1 = True
+        processed_pasal_numbers.add(1)
+        print(f"*** Mendeteksi Pasal 1 pada baris {line_number}: '{line}' ***")
+
+        # Proses konten yang mungkin ada setelah "Pasal 1" pada baris yang sama
+        content_after_pasal = re.sub(r"^Pasal\s+1\b", "", line, re.IGNORECASE).strip()
+        if content_after_pasal:
+            current_lines.append(content_after_pasal)
+        continue
 
     # Kumpulkan 30 baris pertama konten utama untuk debugging
     if in_main_content and len(debug_lines_after_memutuskan) < 30:
@@ -487,6 +522,14 @@ for raw_line in full_text.splitlines():
             r"^Fasa[l1]\s+(\d+[A-Z]?)\s*$", line, re.IGNORECASE
         )  # "Fasal 1" (error OCR)
     )
+
+    # Debug log untuk deteksi pasal
+    if pasal_match or alt_pasal_match:
+        if pasal_match:
+            match_info = f"Format normal: {line} -> Pasal {pasal_match.group(1)}"
+        else:
+            match_info = f"Format alternatif: {line} -> {alt_pasal_match.group(1)}"
+        print(f"DEBUG: Deteksi pasal - {match_info}")
 
     # KHUSUS: Mode agresif untuk mencari "Pasal X" dalam baris
     if AGGRESSIVE_MODE and not pasal_match and not alt_pasal_match:
@@ -588,6 +631,37 @@ for raw_line in full_text.splitlines():
 
         try:
             pasal_number = int(re.sub(r"[A-Z]", "", pasal_number_str))
+            print(f"DEBUG: Mencoba memproses Pasal {pasal_number} dari '{line}'")
+
+            # Deteksi khusus untuk Pasal 1 yang belum terproses
+            if (
+                pasal_number == 1
+                and 1 not in processed_pasal_numbers
+                and in_main_content
+            ):
+                print(f">>> Menemukan Pasal 1 yang belum diproses: '{line}'")
+                # Simpan pasal lama jika ada
+                if current_pasal and current_lines:
+                    content = "\n".join(current_lines).strip()
+                    metadata = {
+                        "jenis_peraturan": JENIS_PERATURAN,
+                        "nomor_peraturan": NOMOR_PERATURAN,
+                        "tahun_peraturan": TAHUN_PERATURAN,
+                        "tipe_bagian": current_pasal,
+                        "bagian_dari": "",  # Kosongkan karena tidak ada bab
+                        "judul_peraturan": JUDUL_PERATURAN,
+                        "status": "berlaku",
+                    }
+                    pasal_docs.append(Document(page_content=content, metadata=metadata))
+
+                # Mulai pasal baru dari Pasal 1
+                current_pasal = f"Pasal {pasal_number_str}"
+                current_lines = []
+                last_pasal_number = pasal_number
+                processed_pasal_numbers.add(pasal_number)
+                found_pasal_1 = True
+                print(f">>> Memproses Pasal 1 sebagai pasal pertama")
+                continue
 
             # Deteksi khusus untuk baris "Pasal 1" yang terpisah (awal dokumen)
             standalone_pasal = re.match(r"^Pasal\s+\d+\s*$", line, re.IGNORECASE)
@@ -781,7 +855,16 @@ if current_pasal and current_lines:
     # Cek apakah ada konten, jika kosong maka tidak perlu disimpan
     if content:
         # Jangan tambahkan konten pasal jika sudah ada metadata pasal yang sama
-        if current_pasal in processed_pasal_numbers:
+        pasal_num = extract_pasal_number(current_pasal)
+
+        # Cek apakah pasal ini sudah ada dalam pasal_docs
+        is_already_saved = False
+        for doc in pasal_docs:
+            if doc.metadata["tipe_bagian"] == current_pasal:
+                is_already_saved = True
+                break
+
+        if is_already_saved:
             print(f"Skip menyimpan {current_pasal} karena sudah ada")
         else:
             # Bersihkan konten dari bagian "Ditetapkan di Jakarta" dan setelahnya
@@ -806,22 +889,32 @@ if current_pasal and current_lines:
                     "status": "berlaku",
                 }
                 pasal_docs.append(Document(page_content=content, metadata=metadata))
-                processed_pasal_numbers.add(pasal_number)
-                print(f"Menyimpan konten {current_pasal}")
+                print(f"Menyimpan konten pasal terakhir: {current_pasal}")
 
-# Mulai pasal baru - hanya jika pasal belum diproses sebelumnya
-if pasal_number not in processed_pasal_numbers:
-    current_pasal = f"Pasal {pasal_number_str}"
-    current_lines = [
-        line.replace(f"Pasal {pasal_number_str}:", "")
-        .replace(f"Pasal {pasal_number_str},", "")
-        .strip()
-    ]
-    last_pasal_number = pasal_number
-    processed_pasal_numbers.add(pasal_number)
-    print(f"Mulai pasal baru: {current_pasal}")
+# Sebelum menulis ke CSV, periksa apakah Pasal 1 ada dalam hasil
+found_pasal_1_in_results = False
+for doc in pasal_docs:
+    if doc.metadata["tipe_bagian"] == "Pasal 1":
+        found_pasal_1_in_results = True
+        break
+
+if not found_pasal_1_in_results:
+    print("PERINGATAN: Pasal 1 tidak ditemukan dalam hasil akhir!")
+    # Tambahkan pengecekan di bagian preambule_end_index
+    pasal1_lines = []
+    for i in range(
+        preambule_end_index, preambule_end_index + 30
+    ):  # Cek 30 baris setelah preambule
+        if i < len(lines):
+            if re.search(r"Pasal\s+1\b", lines[i], re.IGNORECASE):
+                pasal1_lines.append((i, lines[i]))
+
+    if pasal1_lines:
+        print(f"Kandidat Pasal 1 yang terlewat (30 baris setelah preambule):")
+        for idx, line in pasal1_lines:
+            print(f"  Baris {idx+1}: {line}")
 else:
-    print(f"Skip memulai pasal baru {pasal_number} karena sudah diproses")
+    print("Pasal 1 berhasil ditemukan dalam hasil akhir.")
 
 # ---------------------------------------------------------------------------
 # 5. Tulis ke CSV (2 kolom saja: metadata & content)
