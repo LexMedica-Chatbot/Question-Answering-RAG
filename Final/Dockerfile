@@ -21,8 +21,8 @@ COPY . .
 # Cloud Run mewajibkan aplikasi mendengarkan $PORT (default 8080)
 ENV PORT=8080
 
-# Perintah start menggunakan agentic_rag_executor.py
-CMD ["sh", "-c", "uvicorn agentic_rag_executor:app --host 0.0.0.0 --port ${PORT:-8080}"] 
+# Perintah start menggunakan multi_api.py
+CMD ["sh", "-c", "uvicorn multi_api:app --host 0.0.0.0 --port ${PORT:-8080}"] 
 
 
 # # Perintah start menggunakan simple_api.py

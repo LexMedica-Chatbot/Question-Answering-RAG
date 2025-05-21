@@ -880,4 +880,4 @@ async def available_models():
 # Run the API server
 if __name__ == "__main__":
     print(f"API Key: {API_KEY}")
-    uvicorn.run("agentic_rag_executor:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("multi_api:app", host="0.0.0.0", port=8000, reload=True)
