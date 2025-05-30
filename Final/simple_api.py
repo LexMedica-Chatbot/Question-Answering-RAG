@@ -9,6 +9,7 @@ import uvicorn
 from typing import List, Dict, Any, Optional, Literal
 import secrets
 from starlette.status import HTTP_403_FORBIDDEN
+import time
 
 # RAG components
 from langchain_openai import ChatOpenAI
@@ -176,6 +177,9 @@ def get_vector_store(embedding_model="large"):
 
     # Dapatkan embeddings model
     embeddings = get_embeddings(embedding_model)
+    print(
+        f"[DEBUG] Initialized embeddings model: {EMBEDDING_CONFIG[embedding_model]['model']}"
+    )
 
     # Dapatkan nama tabel sesuai model
     table_name = EMBEDDING_CONFIG[embedding_model]["table"]
@@ -186,17 +190,27 @@ def get_vector_store(embedding_model="large"):
     else:
         query_name = "match_documents"
 
+    print(f"[DEBUG] Initializing vector store with:")
+    print(f"[DEBUG] - Table name: {table_name}")
+    print(f"[DEBUG] - Query function: {query_name}")
+    print(f"[DEBUG] - Supabase URL: {supabase_url}")
     print(
-        f"[DEBUG] Using vector store table: {table_name} with query function: {query_name}"
+        f"[DEBUG] - Supabase key length: {len(supabase_key) if supabase_key else 'None'}"
     )
 
-    # Buat vector store
-    return SupabaseVectorStore(
-        embedding=embeddings,
-        client=supabase,
-        table_name=table_name,
-        query_name=query_name,
-    )
+    try:
+        # Buat vector store
+        vector_store = SupabaseVectorStore(
+            embedding=embeddings,
+            client=supabase,
+            table_name=table_name,
+            query_name=query_name,
+        )
+        print("[DEBUG] Vector store initialized successfully")
+        return vector_store
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize vector store: {str(e)}")
+        raise
 
 
 def format_docs(docs):
@@ -294,95 +308,105 @@ class ChatRequest(BaseModel):
     embedding_model: Literal["small", "large"] = (
         "large"  # Model embedding yang digunakan
     )
-    conversation_id: Optional[str] = None
     previous_responses: List[str] = []  # Menambahkan riwayat chat sebelumnya
 
 
 class ChatResponse(BaseModel):
     answer: str
-    document_links: List[Dict[str, Any]] = []
     model_info: Dict[str, Any] = {}  # Ubah dari str ke Any untuk bisa menyimpan angka
     referenced_documents: List[Dict[str, Any]] = (
         []
     )  # Menambahkan informasi dokumen yang direferensikan
+    processing_time_ms: Optional[int] = None
 
 
 # Fungsi untuk mengekstrak informasi dokumen dari hasil retrieval
 def extract_document_info(docs):
     """Ekstrak informasi dokumen dari hasil retrieval"""
     document_info = []
+
+    print("[DEBUG] Starting document info extraction")
+    print(f"[DEBUG] Number of documents: {len(docs)}")
+
     for i, doc in enumerate(docs):
-        # Debug: print seluruh metadata untuk mengetahui key apa saja yang tersedia
-        print(f"[DEBUG] Document #{i} metadata: {doc.metadata}")
+        try:
+            print(f"\n[DEBUG] Processing document #{i+1}")
+            print(f"[DEBUG] Raw metadata: {doc.metadata}")
+            print(f"[DEBUG] Document type: {type(doc)}")
 
-        # Coba ambil informasi dari berbagai kemungkinan metadata key
-        source = doc.metadata.get("source", None)
-        filename = doc.metadata.get("filename", None)
-        title = doc.metadata.get("title", None)
-        path = doc.metadata.get("path", None)
-        document_id = doc.metadata.get("id", None)
+            # Pastikan metadata adalah dictionary
+            metadata = doc.metadata if isinstance(doc.metadata, dict) else {}
 
-        # Data dari metadata tambahan yang mungkin berguna untuk nama dokumen
-        jenis_peraturan = doc.metadata.get("jenis_peraturan", "")
-        nomor_peraturan = doc.metadata.get("nomor_peraturan", "")
-        tahun_peraturan = doc.metadata.get("tahun_peraturan", "")
-        tipe_bagian = doc.metadata.get("tipe_bagian", "")
-        judul_peraturan = doc.metadata.get("judul_peraturan", "")
-        status = doc.metadata.get(
-            "status", "berlaku"
-        )  # Default ke "berlaku" jika tidak ada
+            # Data dari metadata dengan default values
+            jenis_peraturan = metadata.get("jenis_peraturan", "Tidak Diketahui")
+            nomor_peraturan = metadata.get("nomor_peraturan", "-")
+            tahun_peraturan = metadata.get("tahun_peraturan", "-")
+            tipe_bagian = metadata.get("tipe_bagian", "")
+            status = metadata.get("status", "berlaku")
 
-        # Buat nama dokumen urutan (sesuai permintaan)
-        doc_name = f"Dokumen #{i+1}"
+            # Buat nama dokumen urutan
+            doc_name = f"Dokumen #{i+1}"
 
-        # Buat nama deskriptif untuk informasi tambahan
-        if jenis_peraturan and nomor_peraturan and tahun_peraturan:
-            doc_description = (
-                f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
+            # Buat deskripsi dokumen
+            if jenis_peraturan != "Tidak Diketahui" and nomor_peraturan != "-":
+                doc_description = (
+                    f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
+                )
+                if tipe_bagian:
+                    doc_description += f" {tipe_bagian}"
+                doc_description += f" (Status: {status})"
+            else:
+                # Coba ekstrak informasi dari content jika metadata kosong
+                content = doc.page_content if hasattr(doc, "page_content") else ""
+                # Coba ekstrak informasi dari konten menggunakan regex
+                import re
+
+                peraturan_match = re.search(
+                    r"(UU|PP|Perpres|Permenkes)\s+No[mor]?\.*\s+(\d+)\s+Tahun\s+(\d{4})",
+                    content,
+                    re.IGNORECASE,
+                )
+                if peraturan_match:
+                    jenis = peraturan_match.group(1)
+                    nomor = peraturan_match.group(2)
+                    tahun = peraturan_match.group(3)
+                    doc_description = (
+                        f"{jenis} No. {nomor} Tahun {tahun} (Status: {status})"
+                    )
+                else:
+                    doc_description = f"{doc_name} (Detail tidak tersedia)"
+
+            # Buat source yang konsisten
+            doc_source = f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan} (Status: {status})"
+            if doc_source.startswith("Tidak Diketahui"):
+                doc_source = doc_description
+
+            print(f"[DEBUG] Processed document info: {doc_description}")
+
+            document_info.append(
+                {
+                    "name": doc_name,
+                    "description": doc_description,
+                    "source": doc_source,
+                    "content": doc.page_content if hasattr(doc, "page_content") else "",
+                    "metadata": metadata,
+                }
             )
-            if tipe_bagian:
-                doc_description += f" {tipe_bagian}"
-            # Tambahkan status
-            doc_description += f" (Status: {status})"
-        elif title:
-            doc_description = title
-        elif filename:
-            doc_description = filename
-        elif source:
-            # Ekstrak nama file dari path jika ada
-            doc_description = source.split("\\")[-1] if "\\" in source else source
-        elif path:
-            doc_description = path.split("/")[-1]
-        else:
-            # Fallback ke nama dokumen urutan
-            doc_description = doc_name
 
-        # Buat source yang bermakna jika metadata standar tidak tersedia
-        if source or path:
-            doc_source = source or path
-        else:
-            # Buat source deskriptif dari metadata yang tersedia
-            doc_source = (
-                f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan} (Status: {status})"
-                if jenis_peraturan and nomor_peraturan and tahun_peraturan
-                else "Metadata tidak lengkap"
+        except Exception as e:
+            print(f"[ERROR] Error processing document #{i+1}: {str(e)}")
+            # Tambahkan dokumen dengan informasi minimal
+            document_info.append(
+                {
+                    "name": f"Dokumen #{i+1}",
+                    "description": "Error saat memproses dokumen",
+                    "source": "Tidak tersedia",
+                    "content": getattr(doc, "page_content", ""),
+                    "metadata": {},
+                }
             )
 
-        # Tambahkan metadata lain yang mungkin berguna (semua metadata)
-        additional_metadata = {}
-        for key, value in doc.metadata.items():
-            additional_metadata[key] = value
-
-        document_info.append(
-            {
-                "name": doc_name,
-                "description": doc_description,
-                "source": doc_source,
-                "content": doc.page_content,  # Kembalikan seluruh konten
-                "metadata": additional_metadata,
-            }
-        )
-
+    print(f"[DEBUG] Finished processing {len(document_info)} documents")
     return document_info
 
 
@@ -408,21 +432,30 @@ def format_chat_history(previous_responses, query):
 # Create RAG chain
 def create_rag_chain(embedding_model="large"):
     """Create a RAG chain using the specified model"""
-    # Get vector store for the specified model
-    vector_store = get_vector_store(embedding_model)
+    print(f"\n[DEBUG] Creating RAG chain with model: {embedding_model}")
 
-    # Create retriever
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+    try:
+        # Get vector store for the specified model
+        vector_store = get_vector_store(embedding_model)
+        print("[DEBUG] Vector store created successfully")
 
-    # Create RAG chain dengan pemrosesan context yang diubah
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | custom_prompt
-        | llm
-        | StrOutputParser()
-    )
+        # Create retriever
+        retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+        print("[DEBUG] Retriever created successfully")
 
-    return rag_chain, retriever, EMBEDDING_CONFIG[embedding_model]["model"]
+        # Create RAG chain dengan pemrosesan context yang diubah
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | custom_prompt
+            | llm
+            | StrOutputParser()
+        )
+        print("[DEBUG] RAG chain created successfully")
+
+        return rag_chain, retriever, EMBEDDING_CONFIG[embedding_model]["model"]
+    except Exception as e:
+        print(f"[ERROR] Failed to create RAG chain: {str(e)}")
+        raise
 
 
 # API endpoint for chat
@@ -430,10 +463,16 @@ def create_rag_chain(embedding_model="large"):
     "/api/chat", response_model=ChatResponse, dependencies=[Depends(verify_api_key)]
 )
 async def chat(request: ChatRequest):
+    print("\n" + "=" * 50)
+    print("[DEBUG] Starting new chat request")
+    print("=" * 50)
+
     try:
-        print(f"\n[DEBUG] Processing chat request: {request.query}")
-        print(f"[DEBUG] Using embedding model: {request.embedding_model}")
-        print(f"[DEBUG] Previous responses: {len(request.previous_responses)}")
+        start_time = time.time()  # Tambahkan waktu mulai
+        print(f"[DEBUG] Request details:")
+        print(f"- Query: {request.query}")
+        print(f"- Embedding model: {request.embedding_model}")
+        print(f"- Previous responses: {len(request.previous_responses)}")
 
         # Validasi model
         if request.embedding_model not in EMBEDDING_CONFIG:
@@ -445,38 +484,67 @@ async def chat(request: ChatRequest):
         # Dapatkan nama tabel dan model
         table_name = EMBEDDING_CONFIG[request.embedding_model]["table"]
         model_name = EMBEDDING_CONFIG[request.embedding_model]["model"]
-        print(f"[DEBUG] Using table: {table_name}")
-        print(f"[DEBUG] Using model: {model_name}")
+        print(f"[DEBUG] Configuration:")
+        print(f"- Table name: {table_name}")
+        print(f"- Model name: {model_name}")
 
-        # Cek dimensi embedding dari model yang dipilih
-        embeddings = get_embeddings(request.embedding_model)
-        sample_embedding = embeddings.embed_query("Test query for dimension check")
-        embedding_dimensions = len(sample_embedding)
-        print(f"[DEBUG] Current embedding dimensions: {embedding_dimensions}")
-
-        # Create RAG chain for the specified model
-        rag_chain, retriever, model_name = create_rag_chain(request.embedding_model)
-
-        # Get documents for finding links later
-        docs = retriever.get_relevant_documents(request.query)
-
-        # Debug: Print sample document untuk analisis
-        if docs:
-            print(f"[DEBUG] Retrieved {len(docs)} documents")
-            sample_doc = docs[0]
-            print(f"[DEBUG] Sample document metadata: {sample_doc.metadata}")
-            print(
-                f"[DEBUG] Sample document content (first 100 chars): {sample_doc.page_content[:100]}"
+        # Cek dimensi embedding
+        try:
+            embeddings = get_embeddings(request.embedding_model)
+            sample_embedding = embeddings.embed_query("Test query for dimension check")
+            embedding_dimensions = len(sample_embedding)
+            print(f"[DEBUG] Embedding test successful:")
+            print(f"- Dimensions: {embedding_dimensions}")
+        except Exception as e:
+            print(f"[ERROR] Embedding test failed: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error saat menginisialisasi model embedding: {str(e)}",
             )
 
-        # Ekstrak informasi dokumen untuk response
-        referenced_documents = extract_document_info(docs)
-        print(f"[DEBUG] Extracted info from {len(referenced_documents)} documents")
+        # Create RAG chain
+        try:
+            rag_chain, retriever, model_name = create_rag_chain(request.embedding_model)
+            print("[DEBUG] RAG chain created successfully")
+        except Exception as e:
+            print(f"[ERROR] Failed to create RAG chain: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Error saat membuat RAG chain: {str(e)}"
+            )
 
-        # Tambahkan konteks riwayat chat jika ada
+        # Get relevant documents
+        try:
+            docs = retriever.get_relevant_documents(request.query)
+            print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
+
+            if docs:
+                print("[DEBUG] Sample document info:")
+                sample_doc = docs[0]
+                print(f"- Type: {type(sample_doc)}")
+                print(f"- Has metadata: {'metadata' in dir(sample_doc)}")
+                if hasattr(sample_doc, "metadata"):
+                    print(f"- Metadata type: {type(sample_doc.metadata)}")
+                    print(
+                        f"- Metadata keys: {sample_doc.metadata.keys() if isinstance(sample_doc.metadata, dict) else 'Not a dict'}"
+                    )
+        except Exception as e:
+            print(f"[ERROR] Document retrieval failed: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error saat mengambil dokumen relevan: {str(e)}",
+            )
+
+        # Extract document information
+        try:
+            referenced_documents = extract_document_info(docs)
+            print(f"[DEBUG] Extracted info from {len(referenced_documents)} documents")
+        except Exception as e:
+            print(f"[ERROR] Document info extraction failed: {str(e)}")
+            referenced_documents = []  # Fallback to empty list
+
+        # Process chat history
         query_with_history = request.query
         if request.previous_responses:
-            # Gunakan riwayat chat untuk memperkaya konteks jika diperlukan
             chat_history = format_chat_history(
                 request.previous_responses, request.query
             )
@@ -486,41 +554,45 @@ async def chat(request: ChatRequest):
         else:
             chat_history = ""
 
-        # Execute RAG chain
-        answer = rag_chain.invoke(query_with_history)
+        # Generate answer
+        try:
+            answer = rag_chain.invoke(query_with_history)
+            print("[DEBUG] Successfully generated answer")
+        except Exception as e:
+            print(f"[ERROR] Answer generation failed: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Error saat menghasilkan jawaban: {str(e)}"
+            )
 
-        # Extract document names for link retrieval
-        doc_names = [
-            doc.metadata.get("source", "").split("\\")[-1]
-            for doc in docs
-            if "source" in doc.metadata
-        ]
-
-        # Get document links using same embedding model for consistency
-        document_links = find_document_links(
-            doc_names, embedding_model=request.embedding_model
-        )
-
-        # Informasi model untuk respons
+        # Prepare response
         model_info = {
             "model": model_name,
             "table": table_name,
             "dimensions": embedding_dimensions,
         }
 
+        # Hitung waktu pemrosesan
+        end_time = time.time()
+        processing_time_ms = int((end_time - start_time) * 1000)
+
+        print("[DEBUG] Request completed successfully")
+        print("=" * 50 + "\n")
+
         return ChatResponse(
             answer=answer,
-            document_links=document_links,
             model_info=model_info,
             referenced_documents=referenced_documents,
+            processing_time_ms=processing_time_ms,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"[ERROR] Exception in chat endpoint: {str(e)}")
+        print(f"[ERROR] Unexpected error in chat endpoint: {str(e)}")
         import traceback
 
         print(f"[ERROR] Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error internal server: {str(e)}")
 
 
 # Health check endpoint - No authentication needed
