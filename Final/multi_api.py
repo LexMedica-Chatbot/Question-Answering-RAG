@@ -2,6 +2,7 @@ import os
 import time
 import re
 import json
+import ast
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,27 @@ from supabase.client import Client, create_client
 
 # Load environment variables
 load_dotenv()
+
+
+def safe_parse(payload: str) -> Dict[str, Any]:
+    """
+    Parse string payload dengan fallback ke ast.literal_eval() jika json.loads() gagal.
+
+    Args:
+        payload: String yang akan di-parse (bisa JSON atau repr(dict))
+
+    Returns:
+        Dictionary hasil parsing atau dict kosong jika gagal
+    """
+    try:
+        return json.loads(payload)  # ① coba JSON murni
+    except json.JSONDecodeError:
+        try:
+            return ast.literal_eval(payload)  # ② coba repr(dict)
+        except Exception as e:
+            print(f"[WARNING] Parse failed: {e}")
+            return {}  # ③ terakhir, kosong
+
 
 # Security settings
 API_KEY_NAME = "X-API-Key"
@@ -87,7 +109,46 @@ MODELS = {
 # Initialize LLM dengan model utama
 llm = ChatOpenAI(**MODELS["MAIN"])
 
+# ── setelah MODELS dict ─────────────────────────────
+MODELS["SUMMARY"] = {"model": "gpt-4o-mini", "temperature": 0}
+
+summary_llm = ChatOpenAI(**MODELS["SUMMARY"])
+summary_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Ringkas tiap pasangan tanya–jawab di bawah ini (≤2 kalimat/pasangan).",
+        ),
+        ("human", "{pairs}"),
+    ]
+)
+
 # ======================= UTILITY FUNCTIONS =======================
+
+
+def pairs_to_str(prev: List[Any]) -> List[str]:
+    """Ubah previous_responses menjadi list string 'Pertanyaan: …\nJawaban: …'."""
+    out = []
+    for item in prev[-3:]:  # ambil 3 terakhir
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            q, a = item
+        elif isinstance(item, dict):
+            q, a = item.get("query", ""), item.get("answer", "")
+        else:  # sudah string
+            out.append(str(item))
+            continue
+        out.append(f"Pertanyaan: {q}\nJawaban: {a}")
+    return out
+
+
+def summarize_pairs(prev: List[Any]) -> str:
+    strs = pairs_to_str(prev)
+    if not strs:
+        return ""
+    joined = "\n\n".join(strs)
+    return summary_llm.invoke(
+        summary_prompt.format_prompt(pairs=joined)
+    ).content.strip()
 
 
 def get_embeddings(embedding_model="large"):
@@ -131,18 +192,16 @@ def format_docs(docs):
             "status", "berlaku"
         )  # Default ke "berlaku" jika tidak ada
 
-        doc_header = f"Dokumen #{i+1}"
-
+        # Format dokumen dengan header yang lebih informatif
         if jenis_peraturan and nomor_peraturan and tahun_peraturan:
-            doc_header += (
-                f" ({jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
+            doc_header = (
+                f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
             )
             if tipe_bagian:
                 doc_header += f" {tipe_bagian}"
-            # Tambahkan status di header dokumen
-            doc_header += f", Status: {status})"
+            doc_header += f" (Status: {status})"
         else:
-            doc_header += ")"
+            doc_header = f"Dokumen (Status: {status})"
 
         formatted_docs.append(f"{doc_header}:\n{doc.page_content}\n")
 
@@ -337,8 +396,16 @@ def extract_legal_entities(docs):
 # ======================= AGENT TOOLS DEFINITION =======================
 
 
+# Tambahkan fungsi sanitasi karakter kontrol
+def clean_control(text: str) -> str:
+    """Bersihkan karakter kontrol dari teks."""
+    return "".join(ch if ch >= " " else " " for ch in text)
+
+
 @tool
-def search_documents(query: str, embedding_model: str = "large", limit: int = 5) -> str:
+def search_documents(
+    query: str, embedding_model: str = "large", limit: int = 5
+) -> Dict[str, Any]:
     """
     Mencari dokumen dari vectorstore berdasarkan kueri yang diberikan.
 
@@ -348,7 +415,7 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
         limit: Jumlah dokumen yang dikembalikan
 
     Returns:
-        String JSON yang berisi dokumen yang diformat untuk LLM dan data dokumen terstruktur
+        Dictionary berisi dokumen yang diformat untuk LLM dan data dokumen terstruktur
     """
     try:
         print(f"\n[TOOL] Searching for documents with query: {query}")
@@ -359,12 +426,10 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
         docs = retriever.invoke(query)
 
         if not docs:
-            return json.dumps(
-                {
-                    "formatted_docs_for_llm": "Tidak ditemukan dokumen yang relevan dengan query tersebut.",
-                    "retrieved_docs_data": [],
-                }
-            )
+            return {
+                "formatted_docs_for_llm": "Tidak ditemukan dokumen yang relevan dengan query tersebut.",
+                "retrieved_docs_data": [],
+            }
 
         # Format dokumen untuk konteks LLM
         formatted_docs_for_llm = format_docs(docs)
@@ -373,7 +438,7 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
         retrieved_docs_data = []
         for i, doc in enumerate(docs):
             metadata = doc.metadata if isinstance(doc.metadata, dict) else {}
-            content = doc.page_content
+            content = clean_control(doc.page_content)  # Bersihkan karakter kontrol
 
             # Ekstrak informasi dasar dari metadata
             jenis_peraturan = metadata.get("jenis_peraturan", "")
@@ -406,13 +471,6 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
                 if judul_peraturan:
                     doc_name += f" tentang {judul_peraturan}"
 
-            # Buat deskripsi lengkap
-            description = (
-                f"{doc_name} (Status: {status})"
-                if doc_name
-                else f"Dokumen #{i+1} (Status: {status})"
-            )
-
             # Buat metadata terstruktur
             structured_metadata = {
                 "status": status,
@@ -424,32 +482,41 @@ def search_documents(query: str, embedding_model: str = "large", limit: int = 5)
                 "tahun_peraturan": tahun_peraturan,
             }
 
+            # Buat label peraturan untuk ditampilkan di frontend
+            peraturan_label = ""
+            if jenis_peraturan and nomor_peraturan and tahun_peraturan:
+                peraturan_label = (
+                    f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
+                )
+                if tipe_bagian:
+                    peraturan_label += f" {tipe_bagian}"
+                if judul_peraturan:
+                    peraturan_label += f" tentang {judul_peraturan}"
+
             retrieved_docs_data.append(
                 {
-                    "name": doc_name or f"Dokumen #{i+1}",
-                    "description": description,
-                    "source": doc_name or f"Dokumen #{i+1}",
+                    "name": f"Dokumen #{i+1}",
+                    "source": doc_name,
                     "content": content,
-                    "metadata": structured_metadata,
+                    "metadata": {
+                        **structured_metadata,
+                        "label": peraturan_label,  # Tambahkan label untuk frontend
+                    },
                 }
             )
 
         print(f"[TOOL] Found {len(docs)} documents")
 
-        return json.dumps(
-            {
-                "formatted_docs_for_llm": formatted_docs_for_llm,
-                "retrieved_docs_data": retrieved_docs_data,
-            }
-        )
+        return {
+            "formatted_docs_for_llm": formatted_docs_for_llm,
+            "retrieved_docs_data": retrieved_docs_data,
+        }
     except Exception as e:
         print(f"[ERROR] Error pada pencarian dokumen: {str(e)}")
-        return json.dumps(
-            {
-                "formatted_docs_for_llm": f"Error pada pencarian dokumen: {str(e)}",
-                "retrieved_docs_data": [],
-            }
-        )
+        return {
+            "formatted_docs_for_llm": f"Error pada pencarian dokumen: {str(e)}",
+            "retrieved_docs_data": [],
+        }
 
 
 # Tambahkan variabel untuk melacak jumlah penyempurnaan
@@ -540,53 +607,39 @@ Berikan HANYA query yang sudah disempurnakan, tanpa penjelasan tambahan."""
 
 
 @tool
-def evaluate_documents(query: str, documents: str) -> str:
+def evaluate_documents(
+    query: str, documents: Union[str, Dict[str, Any], List[Any]]
+) -> str:
     """
     Mengevaluasi kualitas dan relevansi dokumen untuk query.
 
     Args:
         query: Query yang perlu dijawab (wajib)
-        documents: String JSON berisi dokumen hasil pencarian dengan format:
-            {
-                "formatted_docs_for_llm": string,
-                "retrieved_docs_data": [
-                    {
-                        "name": string,
-                        "description": string,
-                        "source": string,
-                        "content": string,
-                        "metadata": {
-                            "status": string,
-                            "bagian_dari": string,
-                            "tipe_bagian": string,
-                            "jenis_peraturan": string,
-                            "judul_peraturan": string,
-                            "nomor_peraturan": string,
-                            "tahun_peraturan": string
-                        }
-                    }
-                ]
-            }
+        documents: Dict, list, atau string JSON berisi dokumen hasil pencarian
 
     Returns:
         Hasil evaluasi dokumen: "MEMADAI" atau "KURANG MEMADAI" dengan alasan
     """
     try:
         print(f"\n[TOOL] Evaluating document quality for query: {query}")
+        print(f"[DEBUG] Input type: {type(documents)}")
 
-        # Parse JSON input
-        try:
-            json_data = json.loads(documents)
-            if not isinstance(json_data, dict):
-                raise ValueError("Input bukan JSON object yang valid")
+        # --- PARSING INPUT ---
+        if isinstance(documents, (dict, list)):
+            json_data = (
+                {"retrieved_docs_data": documents}
+                if isinstance(documents, list)
+                else documents
+            )
+        else:  # string
+            parsed = safe_parse(documents)
+            json_data = (
+                {"retrieved_docs_data": parsed} if isinstance(parsed, list) else parsed
+            )
 
-            retrieved_docs = json_data.get("retrieved_docs_data", [])
-            if not retrieved_docs:
-                return "KURANG MEMADAI: Tidak ditemukan dokumen yang relevan."
-
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] Gagal parse JSON input: {str(e)}")
-            return "KURANG MEMADAI: Format input dokumen tidak valid"
+        retrieved_docs = json_data.get("retrieved_docs_data", [])
+        if not retrieved_docs:
+            return "KURANG MEMADAI: Tidak ditemukan dokumen yang relevan."
 
         # Hitung jumlah dokumen dan status
         doc_count = len(retrieved_docs)
@@ -840,32 +893,14 @@ def format_reference(doc_info: dict):
 
 
 @tool
-def generate_answer(documents: str, query: str = None) -> str:
+def generate_answer(
+    documents: Union[str, Dict[str, Any], List[Any]], query: str = None
+) -> str:
     """
     Menghasilkan jawaban berdasarkan dokumen yang ditemukan.
 
     Args:
-        documents: String JSON berisi dokumen hasil pencarian dengan format:
-            {
-                "formatted_docs_for_llm": string,
-                "retrieved_docs_data": [
-                    {
-                        "name": string,
-                        "description": string,
-                        "source": string,
-                        "content": string,
-                        "metadata": {
-                            "status": string,
-                            "bagian_dari": string,
-                            "tipe_bagian": string,
-                            "jenis_peraturan": string,
-                            "judul_peraturan": string,
-                            "nomor_peraturan": string,
-                            "tahun_peraturan": string
-                        }
-                    }
-                ]
-            }
+        documents: Dict, list, atau string JSON berisi dokumen hasil pencarian
         query: Query yang perlu dijawab (wajib)
 
     Returns:
@@ -876,20 +911,24 @@ def generate_answer(documents: str, query: str = None) -> str:
             return "Error: Query tidak boleh kosong. Query harus berasal dari pertanyaan pengguna."
 
         print(f"\n[TOOL] Generating answer for query: {query}")
+        print(f"[DEBUG] Input type: {type(documents)}")
 
-        # Parse JSON input
-        try:
-            json_data = json.loads(documents)
-            if not isinstance(json_data, dict):
-                raise ValueError("Input bukan JSON object yang valid")
+        # --- PARSING INPUT ---
+        if isinstance(documents, (dict, list)):
+            json_data = (
+                {"retrieved_docs_data": documents}
+                if isinstance(documents, list)
+                else documents
+            )
+        else:  # string
+            parsed = safe_parse(documents)
+            json_data = (
+                {"retrieved_docs_data": parsed} if isinstance(parsed, list) else parsed
+            )
 
-            retrieved_docs = json_data.get("retrieved_docs_data", [])
-            if not retrieved_docs:
-                return "Mohon maaf, tidak ada informasi yang cukup dalam database kami untuk menjawab pertanyaan Anda. Silakan coba pertanyaan lain atau hubungi admin sistem untuk informasi lebih lanjut."
-
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] Gagal parse JSON input: {str(e)}")
-            return "Error: Format input dokumen tidak valid"
+        retrieved_docs = json_data.get("retrieved_docs_data", [])
+        if not retrieved_docs:
+            return "Mohon maaf, tidak ada informasi yang cukup dalam database kami untuk menjawab pertanyaan Anda. Silakan coba pertanyaan lain atau hubungi admin sistem untuk informasi lebih lanjut."
 
         # Format dokumen untuk prompt dengan metadata terstruktur
         formatted_docs = []
@@ -1054,6 +1093,7 @@ ATURAN PENTING:
 4. SELALU sertakan query asli saat memanggil evaluate_documents
 5. HANYA BOLEH melakukan penyempurnaan query SEKALI
 6. JANGAN melakukan evaluasi kedua setelah penyempurnaan query
+7. SETELAH langkah ke-4 (pencarian kedua) SEGERA panggil generate_answer dan JANGAN memanggil evaluate_documents lagi
 
 PENANGANAN STATUS PERATURAN:
 1. Prioritaskan informasi dari dokumen dengan status "berlaku"
@@ -1077,6 +1117,7 @@ tools = [
 prompt = ChatPromptTemplate.from_messages(
     [
         ("system", system_prompt),
+        ("system", "{history_summary}"),  # <── baru
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -1094,7 +1135,7 @@ agent_executor = AgentExecutor(
     handle_parsing_errors=True,
     return_intermediate_steps=True,
     max_execution_time=120,  # Naikkan batas waktu eksekusi maksimum (dalam detik)
-    max_iterations=4,  # Batasi maksimal 4 iterasi (1 pencarian awal + 1 evaluasi + 1 penyempurnaan + 1 pencarian kedua)
+    max_iterations=6,  # Naikkan ke 6 untuk mengakomodasi semua langkah (search-eval-refine-search-answer)
 )
 
 # Tambahkan variabel untuk melacak jumlah penyempurnaan
@@ -1106,7 +1147,9 @@ refinement_count = 0
 class AgenticRequest(BaseModel):
     query: str
     embedding_model: Literal["small", "large"] = "large"
-    previous_responses: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
+    previous_responses: List[Union[List[str], Dict[str, Any], str]] = Field(
+        default_factory=list
+    )
 
 
 class StepInfo(BaseModel):
@@ -1163,21 +1206,17 @@ async def agentic_chat(request: AgenticRequest):
                 detail=f"Error saat menginisialisasi model embedding: {str(e)}",
             )
 
-        # Format chat history dari previous_responses
-        chat_history = []
-        if request.previous_responses:
-            for response in request.previous_responses:
-                if "query" in response and "answer" in response:
-                    chat_history.extend(
-                        [
-                            HumanMessage(content=response["query"]),
-                            AIMessage(content=response["answer"]),
-                        ]
-                    )
+        # Buat ringkasan history dan combined query
+        history_summary = summarize_pairs(request.previous_responses)
+        combined_query = f"{history_summary} {request.query}".strip()
 
-        # Execute agent with conversation memory
+        # Execute agent dengan history yang sudah diringkas
         result = agent_executor.invoke(
-            {"input": request.query, "chat_history": chat_history}
+            {
+                "input": request.query,
+                "history_summary": history_summary,
+                "chat_history": [],  # tidak kirim percakapan mentah
+            }
         )
 
         # Extract the final answer from the agent result
@@ -1202,25 +1241,28 @@ async def agentic_chat(request: AgenticRequest):
         processed_content_hashes = set()  # Untuk menghindari duplikasi dokumen
 
         for step in result["intermediate_steps"]:
-            tool_name = step[0].tool
-            if tool_name == "search_documents" and isinstance(step[1], str):
+            if step[0].tool != "search_documents":
+                continue
+
+            payload = step[1]  # bisa str atau dict
+            if isinstance(payload, dict):
+                docs_block = payload.get("retrieved_docs_data", [])
+            else:  # str
                 try:
-                    # Coba parse sebagai JSON
-                    json_data = json.loads(step[1])
-                    if (
-                        isinstance(json_data, dict)
-                        and "retrieved_docs_data" in json_data
-                    ):
-                        for doc_data in json_data["retrieved_docs_data"]:
-                            # Cek duplikasi berdasarkan hash konten
-                            content_hash = hash(doc_data.get("content", ""))
-                            if content_hash not in processed_content_hashes:
-                                all_retrieved_documents_data.append(doc_data)
-                                processed_content_hashes.add(content_hash)
+                    parsed = json.loads(payload)
+                    docs_block = parsed.get("retrieved_docs_data", [])
                 except json.JSONDecodeError:
-                    print(
-                        f"[API] Peringatan: Output search_documents bukan JSON valid: {step[1][:100]}"
-                    )
+                    try:  # string repr dict → pakai ast
+                        parsed = ast.literal_eval(payload)
+                        docs_block = parsed.get("retrieved_docs_data", [])
+                    except Exception:
+                        docs_block = []
+
+            for doc in docs_block:
+                h = hash(doc.get("content", ""))
+                if h not in processed_content_hashes:
+                    all_retrieved_documents_data.append(doc)
+                    processed_content_hashes.add(h)
 
         # Gunakan dokumen yang sudah terstruktur untuk referenced_documents
         referenced_documents = all_retrieved_documents_data

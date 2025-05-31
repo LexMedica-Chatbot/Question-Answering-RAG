@@ -10,6 +10,7 @@ from typing import List, Dict, Any, Optional, Literal
 import secrets
 from starlette.status import HTTP_403_FORBIDDEN
 import time
+from operator import itemgetter  # NEW: untuk ekstrak field dari dict
 
 # RAG components
 from langchain_openai import ChatOpenAI
@@ -148,9 +149,11 @@ Anda adalah asisten informasi dokumen hukum kesehatan, bukan penasihat medis ata
 5. Jangan pernah berhalusinasi atau membuat informasi yang tidak ada dalam dokumen.
 6. Jika Anda tidak yakin, katakan bahwa informasi tersebut tidak ditemukan dalam dokumen yang tersedia.
 7. JANGAN memberikan saran medis, diagnosa penyakit, atau rekomendasi pengobatan.
+8. Jika ada "riwayat percakapan sebelumnya", gunakan itu sebagai konteks utama untuk memahami "pertanyaan saat ini" dan berikan jawaban yang relevan dengan keseluruhan percakapan.
 
 Jawaban Anda harus faktual, akurat, dan hanya berdasarkan pada dokumen yang tersedia.""",
         ),
+        ("system", "{history}"),  # NEW: placeholder untuk riwayat yang diformat
         ("human", "{question}"),
         (
             "system",
@@ -247,6 +250,17 @@ def format_docs(docs):
     return "\n\n".join(formatted_docs)
 
 
+def summarize_pairs(pairs: List[str]) -> str:
+    """Ringkas max 3 pasangan Q-A (>2? diambil 3 terakhir)."""
+    if not pairs:
+        return ""
+    limited = pairs[-3:]  # ambil 3 terakhir
+    joined = "\n\n".join(limited)
+    return small_llm.invoke(
+        summarizer_prompt.format_prompt(chat_pairs=joined)
+    ).content.strip()
+
+
 def find_document_links(doc_names, embedding_model="large"):
     """Find document links based on document names extracted from retrieved docs"""
     print(f"\n[DEBUG] Searching for document links for: {doc_names}")
@@ -305,18 +319,14 @@ def find_document_links(doc_names, embedding_model="large"):
 # Define request and response models
 class ChatRequest(BaseModel):
     query: str
-    embedding_model: Literal["small", "large"] = (
-        "large"  # Model embedding yang digunakan
-    )
-    previous_responses: List[str] = []  # Menambahkan riwayat chat sebelumnya
+    embedding_model: Literal["small", "large"] = "large"
+    previous_responses: List[Any] = []  # Bisa string, tuple/list dua elemen, atau dict
 
 
 class ChatResponse(BaseModel):
     answer: str
     model_info: Dict[str, Any] = {}  # Ubah dari str ke Any untuk bisa menyimpan angka
-    referenced_documents: List[Dict[str, Any]] = (
-        []
-    )  # Menambahkan informasi dokumen yang direferensikan
+    referenced_documents: List[Dict[str, Any]] = []
     processing_time_ms: Optional[int] = None
 
 
@@ -386,7 +396,6 @@ def extract_document_info(docs):
             document_info.append(
                 {
                     "name": doc_name,
-                    "description": doc_description,
                     "source": doc_source,
                     "content": doc.page_content if hasattr(doc, "page_content") else "",
                     "metadata": metadata,
@@ -429,6 +438,23 @@ def format_chat_history(previous_responses, query):
     return history
 
 
+def to_str_history(prev):
+    if not prev:
+        return []
+    if isinstance(prev[0], dict):
+        # Format: "Pertanyaan: ...\nJawaban: ..."
+        return [
+            f"Pertanyaan: {d.get('query', '')}\nJawaban: {d.get('answer', '')}"
+            for d in prev
+        ]
+    if isinstance(prev[0], (list, tuple)) and len(prev[0]) == 2:
+        # Format: "Pertanyaan: ...\nJawaban: ..."
+        return [f"Pertanyaan: {q}\nJawaban: {a}" for q, a in prev]
+    if isinstance(prev[0], str):
+        return prev
+    return []
+
+
 # Create RAG chain
 def create_rag_chain(embedding_model="large"):
     """Create a RAG chain using the specified model"""
@@ -445,7 +471,12 @@ def create_rag_chain(embedding_model="large"):
 
         # Create RAG chain dengan pemrosesan context yang diubah
         rag_chain = (
-            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            {
+                # ambil hanya combined_query → retriever → format_docs
+                "context": itemgetter("combined_query") | retriever | format_docs,
+                "history": itemgetter("history"),  # tetap
+                "question": itemgetter("question"),  # yang asli user ketik
+            }
             | custom_prompt
             | llm
             | StrOutputParser()
@@ -512,9 +543,16 @@ async def chat(request: ChatRequest):
                 status_code=500, detail=f"Error saat membuat RAG chain: {str(e)}"
             )
 
-        # Get relevant documents
+        # Konversi previous_responses ke string jika perlu
+        prev_str = to_str_history(request.previous_responses)
+        # Format riwayat chat dan gabungkan dengan query untuk retrieval
+        history_text = format_chat_history(prev_str, request.query)
+        combined_query = f"{history_text} " if history_text else ""
+        combined_query += request.query
+
+        # Get relevant documents using combined query
         try:
-            docs = retriever.get_relevant_documents(request.query)
+            docs = retriever.get_relevant_documents(combined_query)
             print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
 
             if docs:
@@ -542,21 +580,14 @@ async def chat(request: ChatRequest):
             print(f"[ERROR] Document info extraction failed: {str(e)}")
             referenced_documents = []  # Fallback to empty list
 
-        # Process chat history
-        query_with_history = request.query
-        if request.previous_responses:
-            chat_history = format_chat_history(
-                request.previous_responses, request.query
-            )
-            print(
-                f"[DEBUG] Added chat history context with {len(request.previous_responses)} previous responses"
-            )
-        else:
-            chat_history = ""
-
-        # Generate answer
+        # Generate answer using chain with history
         try:
-            answer = rag_chain.invoke(query_with_history)
+            chain_input = {
+                "question": request.query,
+                "history": history_text,  # hasil format_chat_history(...)
+                "combined_query": combined_query,  # untuk retriever
+            }
+            answer = rag_chain.invoke(chain_input)
             print("[DEBUG] Successfully generated answer")
         except Exception as e:
             print(f"[ERROR] Answer generation failed: {str(e)}")
