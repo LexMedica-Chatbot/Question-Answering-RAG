@@ -29,7 +29,7 @@ COPY . .
 
 # Cloud Run mewajibkan aplikasi mendengarkan $PORT (default 8080)
 ENV PORT=8080
-ENV REDIS_URL=redis://localhost:6379
+# Note: REDIS_URL should be set in Cloud Run environment variables, not here
 
 # Script untuk start Redis + FastAPI (untuk Cloud Run)
 RUN echo '#!/bin/bash\n\

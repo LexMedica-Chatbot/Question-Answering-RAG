@@ -48,9 +48,22 @@ class SmartRAGCache:
 
     def __init__(self):
         # Redis connection dengan fallback
-        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        redis_url = os.getenv("REDIS_URL")  # Prioritaskan os.getenv
+        if not redis_url:
+            # Fallback ke os.environ jika getenv gagal
+            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+
+        # Debug logging untuk troubleshooting
+        print(f"[CACHE] 🔍 Attempting Redis connection...")
+        print(f"[CACHE] 🔍 Redis URL available: {'Yes' if redis_url else 'No'}")
+
         try:
-            self.redis_client = redis.from_url(redis_url)
+            if not redis_url:
+                raise Exception("REDIS_URL environment variable not found")
+
+            self.redis_client = redis.from_url(
+                redis_url, socket_connect_timeout=10, socket_timeout=10
+            )
             # Test connection
             self.redis_client.ping()
             self.cache_enabled = True
@@ -66,6 +79,7 @@ class SmartRAGCache:
             print(f"[CACHE] ✅ Connected to Redis Cloud: {display_url}")
         except Exception as e:
             print(f"[CACHE] ❌ Redis connection failed: {e}")
+            print(f"[CACHE] 🔍 REDIS_URL present: {'Yes' if redis_url else 'No'}")
             print("[CACHE] 🔄 Running without cache")
             self.cache_enabled = False
             self.redis_client = None

@@ -9,7 +9,6 @@ services:
         env_file:
             - .env
         environment:
-            - REDIS_URL=redis://default:NGQrDDRfRBzXmzQYSiqh0WnXW2g4ZHQw@redis-16305.c44.us-east-1-2.ec2.redns.redis-cloud.com:16305
             - PORT=8080
         volumes:
             - .:/app
