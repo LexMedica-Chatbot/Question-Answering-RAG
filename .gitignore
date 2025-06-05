@@ -4,8 +4,13 @@
 .env.production
 .env.development
 
-# Application directories
-qa-system
+# Virtual environments
+qa-system/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
 # Python cache
 __pycache__/
@@ -13,6 +18,54 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
 
 # IDE
 .vscode/
@@ -41,3 +94,12 @@ redis_cache_report.txt
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Database files
+*.db
+*.sqlite3
+
+# Model files (if large)
+*.pkl
+*.joblib
+*.model
