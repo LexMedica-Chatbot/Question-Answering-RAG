@@ -37,12 +37,15 @@ if [ "$NODE_ENV" = "production" ]; then\n\
   echo "✅ Redis started"\n\
 fi\n\
 echo "🌐 Starting FastAPI..."\n\
-exec uvicorn multi_api:app --host 0.0.0.0 --port ${PORT:-8080}' > start.sh \
+exec "$@"' > start.sh \
     && chmod +x start.sh
 
 # Health check untuk Cloud Run
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Perintah start
-CMD ["./start.sh"] 
+# Perintah start menggunakan multi_api.py
+CMD ["sh", "-c", "uvicorn multi_api:app --host 0.0.0.0 --port ${PORT:-8080}"]
+
+# # Perintah start menggunakan simple_api.py
+# CMD ["sh", "-c", "uvicorn simple_api:app --host 0.0.0.0 --port ${PORT:-8080}"] 

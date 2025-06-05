@@ -87,11 +87,7 @@ class SmartRAGCache:
                 print(f"[CACHE] ✅ Level 2 HIT - Semantic match")
                 return semantic_result
 
-            # 📚 LEVEL 3: Document-based Cache
-            document_result = await self._get_document_cache(query, embedding_model)
-            if document_result:
-                print(f"[CACHE] ✅ Level 3 HIT - Document match")
-                return document_result
+            # 📚 LEVEL 3: Document-based Cache - REMOVED for simplicity
 
             print(f"[CACHE] ❌ MISS - Full pipeline needed")
             return None
@@ -207,16 +203,7 @@ class SmartRAGCache:
                     semantic_key, self.semantic_ttl, json.dumps(safe)
                 )
 
-            # Level 3: Document cache
-            if "referenced_documents" in safe and safe["referenced_documents"]:
-                docs = safe["referenced_documents"]
-                key_terms = self._extract_key_terms(query)
-                if key_terms:
-                    doc_fingerprint = self._create_document_fingerprint(key_terms)
-                    doc_key = f"docs:{doc_fingerprint}"
-                    self.redis_client.setex(
-                        doc_key, self.document_ttl, json.dumps(docs)
-                    )
+            # Level 3: Document cache - REMOVED for simplicity
 
             print(f"[CACHE] ✅ Response cached successfully")
 
@@ -346,7 +333,7 @@ class SmartRAGCache:
                 "total_keys": len(self.redis_client.keys("*")),
                 "exact_cache_keys": len(self.redis_client.keys("exact:*")),
                 "semantic_cache_keys": len(self.redis_client.keys("semantic:*")),
-                "document_cache_keys": len(self.redis_client.keys("docs:*")),
+                "document_cache_keys": 0,  # Removed Level 3 cache
                 "embedding_cache_keys": len(self.redis_client.keys("embedding:*")),
             }
         except Exception as e:
