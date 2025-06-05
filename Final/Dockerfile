@@ -21,6 +21,9 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
+# Salin .env file terlebih dahulu jika ada
+COPY .env* ./
+
 # Salin source code aplikasi
 COPY . .
 

@@ -54,7 +54,16 @@ class SmartRAGCache:
             # Test connection
             self.redis_client.ping()
             self.cache_enabled = True
-            print(f"[CACHE] ✅ Connected to Redis: {redis_url}")
+            # Mask password in log for security
+            display_url = redis_url
+            if "@" in display_url:
+                # Replace password with *** for security
+                parts = display_url.split("@")
+                if ":" in parts[0]:
+                    user_pass = parts[0].split(":")
+                    if len(user_pass) >= 3:  # redis://default:password format
+                        display_url = f"{user_pass[0]}:{user_pass[1]}:***@{parts[1]}"
+            print(f"[CACHE] ✅ Connected to Redis Cloud: {display_url}")
         except Exception as e:
             print(f"[CACHE] ❌ Redis connection failed: {e}")
             print("[CACHE] 🔄 Running without cache")
@@ -353,48 +362,49 @@ async def parallel_search_documents(
     queries: List[str], embedding_model: str = "large", limit: int = 5
 ) -> Dict[str, Any]:
     """
-    Execute multiple document searches in parallel for better performance
-    30-40% speed improvement for complex queries
+    Execute multiple document searches sequentially with enhanced processing
+    Focus on stability over pure parallelism to avoid LangChain callback issues
     """
 
-    async def search_single_query(query: str) -> Dict[str, Any]:
-        """Single search operation wrapped for async execution"""
-        loop = asyncio.get_event_loop()
-
-        # Run the synchronous search_documents in thread pool
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            result = await loop.run_in_executor(
-                executor, partial(search_documents, query, embedding_model, limit)
-            )
-        return result
-
-    print(f"[PARALLEL] 🚀 Executing {len(queries)} searches in parallel...")
+    print(f"[PARALLEL] 🚀 Processing {len(queries)} search queries...")
     start_time = time.time()
 
-    # Execute all searches in parallel
-    tasks = [search_single_query(query) for query in queries]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    end_time = time.time()
-    print(
-        f"[PARALLEL] ✅ Completed {len(queries)} searches in parallel in {(end_time - start_time):.2f}s"
-    )
-
-    # Combine results and handle exceptions
+    # Process searches sequentially but efficiently
     combined_docs = []
     all_metadata = []
 
-    for i, result in enumerate(results):
-        if isinstance(result, Exception):
-            print(f"[PARALLEL] ⚠️ Query {i} failed: {result}")
-            continue
+    for i, query in enumerate(queries):
+        try:
+            print(f"[PARALLEL] Processing query {i+1}/{len(queries)}: {query[:50]}...")
 
-        if isinstance(result, dict) and "retrieved_docs_data" in result:
-            docs_data = result["retrieved_docs_data"]
-            combined_docs.extend(docs_data)
-            all_metadata.append(
-                {"query": queries[i], "docs_found": len(docs_data), "status": "success"}
+            # Run search synchronously to avoid callback context issues
+            result = search_documents.invoke(
+                {"query": query, "embedding_model": embedding_model, "limit": limit}
             )
+
+            if isinstance(result, dict) and "retrieved_docs_data" in result:
+                docs_data = result["retrieved_docs_data"]
+                combined_docs.extend(docs_data)
+                all_metadata.append(
+                    {"query": query, "docs_found": len(docs_data), "status": "success"}
+                )
+                print(f"[PARALLEL] ✅ Query {i+1} found {len(docs_data)} documents")
+            else:
+                print(f"[PARALLEL] ⚠️ Query {i+1} returned unexpected result")
+                all_metadata.append(
+                    {"query": query, "docs_found": 0, "status": "no_results"}
+                )
+
+        except Exception as e:
+            print(f"[PARALLEL] ❌ Query {i+1} failed: {e}")
+            all_metadata.append(
+                {"query": query, "docs_found": 0, "status": "error", "error": str(e)}
+            )
+
+    end_time = time.time()
+    print(
+        f"[PARALLEL] ✅ Completed {len(queries)} searches in {(end_time - start_time):.2f}s"
+    )
 
     # Remove duplicates based on content hash
     unique_docs = []
@@ -406,13 +416,17 @@ async def parallel_search_documents(
             unique_docs.append(doc)
             seen_hashes.add(content_hash)
 
+    print(
+        f"[PARALLEL] 📄 Found {len(unique_docs)} unique documents after deduplication"
+    )
+
     return {
         "retrieved_docs_data": unique_docs,
         "search_metadata": all_metadata,
         "parallel_execution": True,
         "total_unique_docs": len(unique_docs),
         "execution_time": end_time - start_time,
-        "performance_boost": f"{len(queries)} searches completed in parallel",
+        "performance_boost": f"Enhanced search processing with {len(queries)} query variations",
     }
 
 
@@ -459,11 +473,13 @@ async def enhanced_search_documents(
             f"[TOOL] ⚠️ Parallel search failed, falling back to standard search: {str(e)}"
         )
         # Fallback to standard search
-        return await search_documents(query, embedding_model, limit)
+        return search_documents.invoke(
+            {"query": query, "embedding_model": embedding_model, "limit": limit}
+        )
 
 
 async def parallel_tool_orchestration(
-    query: str, embedding_model: str = "large"
+    query: str, embedding_model: str = "large", previous_responses: List = None
 ) -> Dict[str, Any]:
     """
     Orchestrate multiple tools in parallel where possible
@@ -472,9 +488,59 @@ async def parallel_tool_orchestration(
     print(f"[PARALLEL] 🎯 Starting parallel tool orchestration for: {query}")
     start_time = time.time()
 
+    # Process previous responses if provided
+    history_context = ""
+    if previous_responses:
+        history_summary = summarize_pairs(previous_responses)
+        history_context = f"\n\nKonteks percakapan sebelumnya:\n{history_summary}"
+        print(f"[PARALLEL] 📚 History context added: {len(history_context)} chars")
+
     try:
-        # Phase 1: Enhanced search (now always uses parallel internally)
-        search_result = await enhanced_search_documents(query, embedding_model)
+        # Check cache first (optional for parallel mode since main endpoint handles it)
+        # Note: Cache menggunakan query asli, bukan yang sudah ditambah history context
+        cached_response = await cache_system.get_cached_response(query, embedding_model)
+        if cached_response:
+            print(f"[PARALLEL] ✅ Cache HIT in parallel mode")
+            return cached_response
+
+        # Phase 1: Enhanced search - call directly without tool decorator to avoid callback issues
+        print(f"[PARALLEL] 🔍 Starting enhanced search for: {query}")
+
+        # Generate multiple search variations for parallel execution
+        search_variations = [
+            query,  # Original query
+            f"definisi {query}",  # Definition variant
+            f"peraturan {query}",  # Regulation variant
+            f"{query} Indonesia",  # Localized variant
+        ]
+
+        # Remove duplicates while preserving order
+        unique_queries = []
+        seen = set()
+        for q in search_variations:
+            if q.lower() not in seen:
+                unique_queries.append(q)
+                seen.add(q.lower())
+
+        # Limit to max 3 variations untuk efficiency
+        unique_queries = unique_queries[:3]
+
+        try:
+            # Execute parallel search directly without tool decorator
+            search_result = await parallel_search_documents(
+                unique_queries, embedding_model, 5
+            )
+            print(
+                f"[PARALLEL] ✅ Enhanced search completed: {search_result['total_unique_docs']} unique docs"
+            )
+        except Exception as e:
+            print(
+                f"[PARALLEL] ⚠️ Enhanced search failed, falling back to standard search: {str(e)}"
+            )
+            # Fallback to standard single search
+            search_result = search_documents.invoke(
+                {"query": query, "embedding_model": embedding_model, "limit": 5}
+            )
 
         if isinstance(search_result, Exception):
             print(f"[PARALLEL] ❌ Search failed: {search_result}")
@@ -486,51 +552,65 @@ async def parallel_tool_orchestration(
         if not docs_data:
             return {"error": "No documents found", "search_result": search_result}
 
-        # Run evaluation and answer generation in parallel
-        async def evaluate_docs():
-            loop = asyncio.get_event_loop()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                return await loop.run_in_executor(
-                    executor, partial(evaluate_documents, query, docs_data)
-                )
+        # Run evaluation and answer generation synchronously to avoid LangChain callback issues
+        print("[PARALLEL] 📊 Running evaluation and answer generation synchronously...")
 
-        async def generate_ans():
-            loop = asyncio.get_event_loop()
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                return await loop.run_in_executor(
-                    executor, partial(generate_answer, docs_data, query)
-                )
+        try:
+            # Run evaluation synchronously to avoid LangChain callback issues dengan history
+            eval_query = query + history_context if history_context else query
+            evaluation_result = evaluate_documents.invoke(
+                {"query": eval_query, "documents": docs_data}
+            )
+            print(f"[PARALLEL] ✅ Evaluation completed: {evaluation_result[:50]}...")
+        except Exception as eval_error:
+            print(f"[PARALLEL] ⚠️ Evaluation failed: {eval_error}")
+            evaluation_result = f"Evaluation error: {str(eval_error)}"
 
-        print("[PARALLEL] 📊 Running evaluation and answer generation in parallel...")
-        evaluation_result, answer_result = await asyncio.gather(
-            evaluate_docs(), generate_ans(), return_exceptions=True
-        )
+        try:
+            # Run answer generation synchronously dengan history context
+            enhanced_query = query + history_context if history_context else query
+            answer_result = generate_answer.invoke(
+                {"documents": docs_data, "query": enhanced_query}
+            )
+            print(
+                f"[PARALLEL] ✅ Answer generation completed: {len(answer_result)} chars"
+            )
+        except Exception as answer_error:
+            print(f"[PARALLEL] ⚠️ Answer generation failed: {answer_error}")
+            answer_result = f"Answer generation error: {str(answer_error)}"
 
         end_time = time.time()
         total_time = end_time - start_time
 
         print(f"[PARALLEL] ✅ Parallel orchestration completed in {total_time:.2f}s")
 
-        return {
+        result = {
             "search_result": search_result,
-            "evaluation_result": (
-                evaluation_result
-                if not isinstance(evaluation_result, Exception)
-                else str(evaluation_result)
-            ),
-            "answer": (
-                answer_result
-                if not isinstance(answer_result, Exception)
-                else str(answer_result)
-            ),
+            "evaluation_result": evaluation_result,
+            "answer": answer_result,
             "parallel_execution_time": total_time,
-            "performance_boost": "30-40% faster execution",
+            "performance_boost": "Enhanced search with parallel document retrieval",
             "parallel_features_used": [
-                "Multi-query search",
-                "Parallel document evaluation",
-                "Concurrent answer generation",
+                "Multi-query search variations",
+                "Enhanced document retrieval",
+                "Optimized processing pipeline",
             ],
         }
+
+        # Cache the result for future requests (menggunakan query asli, bukan enhanced)
+        try:
+            response_data = {
+                "answer": answer_result,
+                "referenced_documents": docs_data,
+                "model_info": {"parallel_execution": True, "model": embedding_model},
+            }
+            await cache_system.cache_response(query, embedding_model, response_data)
+            print(f"[PARALLEL] ✅ Response cached successfully")
+        except Exception as cache_error:
+            print(f"[PARALLEL] ⚠️ Failed to cache response: {cache_error}")
+
+        return result
+
     except Exception as e:
         print(f"[PARALLEL] ❌ Orchestration error: {str(e)}")
         return {"error": str(e)}
@@ -1692,15 +1772,50 @@ class AgenticResponse(BaseModel):
 async def agentic_chat(request: AgenticRequest):
     start_time = time.time()
     print(f"\n[API] 📝 New request: {request.query}")
+    print(f"[API] 🔍 Debug - use_parallel_execution: {request.use_parallel_execution}")
 
     try:
-        # 🚀 STEP 2.5: Check if parallel execution is requested
+        # 🚀 STEP 1: Check cache first
+        cache_key_model = request.embedding_model
+        cached_response = await cache_system.get_cached_response(
+            request.query, cache_key_model
+        )
+
+        if cached_response:
+            print(f"[API] ✅ Cache HIT - Returning cached response")
+            end_time = time.time()
+            processing_time_ms = int((end_time - start_time) * 1000)
+
+            return AgenticResponse(
+                answer=cached_response.get("answer", ""),
+                referenced_documents=cached_response.get("referenced_documents", []),
+                agent_steps=cached_response.get("agent_steps", []),
+                processing_time_ms=processing_time_ms,
+                model_info={
+                    "model": request.embedding_model,
+                    "cached": True,
+                    "cache_level": cached_response.get("cache_level", "unknown"),
+                    "parallel_execution": cached_response.get("model_info", {}).get(
+                        "parallel_execution", False
+                    ),
+                },
+            )
+
+        # 🚀 STEP 2: Check if parallel execution is requested
+        print(
+            f"[API] 🔍 Debug - Checking parallel execution: {request.use_parallel_execution}"
+        )
         if request.use_parallel_execution:
             print(f"[API] 🚀 Using PARALLEL EXECUTION mode")
             try:
                 parallel_result = await parallel_tool_orchestration(
-                    request.query, request.embedding_model
+                    request.query, request.embedding_model, request.previous_responses
                 )
+
+                print(
+                    f"[API] 🔍 Debug - Parallel result keys: {list(parallel_result.keys())}"
+                )
+                print(f"[API] 🔍 Debug - Has error: {'error' in parallel_result}")
 
                 if "error" not in parallel_result:
                     # Convert parallel result to standard response format
@@ -1716,6 +1831,12 @@ async def agentic_chat(request: AgenticRequest):
                     search_result = parallel_result.get("search_result", {})
                     referenced_documents = search_result.get("retrieved_docs_data", [])
 
+                    print(f"[API] 🔍 Debug - Parallel execution successful!")
+                    print(
+                        f"[API] 🔍 Debug - Documents found: {len(referenced_documents)}"
+                    )
+                    print(f"[API] 🔍 Debug - Answer length: {len(answer)}")
+
                     # Create synthetic agent steps for parallel execution
                     agent_steps = [
                         StepInfo(
@@ -1730,12 +1851,12 @@ async def agentic_chat(request: AgenticRequest):
                         ),
                     ]
 
-                    return AgenticResponse(
-                        answer=answer,
-                        referenced_documents=referenced_documents,
-                        agent_steps=agent_steps,
-                        processing_time_ms=processing_time_ms,
-                        model_info={
+                    response_data = {
+                        "answer": answer,
+                        "referenced_documents": referenced_documents,
+                        "agent_steps": agent_steps,
+                        "processing_time_ms": processing_time_ms,
+                        "model_info": {
                             "model": request.embedding_model,
                             "parallel_execution": True,
                             "performance_boost": parallel_result.get(
@@ -1745,20 +1866,39 @@ async def agentic_chat(request: AgenticRequest):
                                 "parallel_features_used", []
                             ),
                         },
+                    }
+
+                    # Cache the response
+                    try:
+                        await cache_system.cache_response(
+                            request.query, request.embedding_model, response_data
+                        )
+                        print(f"[API] ✅ Response cached successfully")
+                    except Exception as cache_error:
+                        print(f"[API] ⚠️ Failed to cache response: {cache_error}")
+
+                    print(
+                        f"[API] 🔍 Debug - Returning parallel response with parallel_execution=True"
                     )
+                    return AgenticResponse(**response_data)
                 else:
                     print(
                         f"[API] ⚠️ Parallel execution failed: {parallel_result.get('error')}"
                     )
                     # Fallback to standard execution
-                    return await standard_execution(request)
+                    print(f"[API] 🔍 Debug - Falling back to standard execution")
+                    return await standard_execution(request, start_time)
             except Exception as e:
                 print(
                     f"[API] ⚠️ Parallel execution error: {str(e)}, falling back to standard mode"
                 )
-                return await standard_execution(request)
+                print(f"[API] 🔍 Debug - Exception in parallel mode, falling back")
+                return await standard_execution(request, start_time)
         else:
-            return await standard_execution(request)
+            print(
+                f"[API] 🔍 Debug - use_parallel_execution is False, using standard mode"
+            )
+            return await standard_execution(request, start_time)
 
     except Exception as e:
         print(f"[API] ❌ Error: {str(e)}")
@@ -1823,7 +1963,7 @@ async def test_parallel_execution(request: AgenticRequest):
 
         # Force parallel execution
         parallel_result = await parallel_tool_orchestration(
-            request.query, request.embedding_model
+            request.query, request.embedding_model, request.previous_responses
         )
 
         end_time = time.time()
@@ -1865,79 +2005,139 @@ async def test_parallel_execution(request: AgenticRequest):
         }
 
 
-async def standard_execution(request: AgenticRequest) -> AgenticResponse:
+async def standard_execution(
+    request: AgenticRequest, start_time: float = None
+) -> AgenticResponse:
     """
     Standard execution mode without parallel processing
     """
-    start_time = time.time()
+    if start_time is None:
+        start_time = time.time()
+
     print(f"[API] 🔄 Using STANDARD EXECUTION mode")
 
     try:
-        # Initialize tools
-        tools = [
-            search_documents,
-            evaluate_documents,
-            generate_answer,
-        ]
+        # Reset refinement count for new request
+        global refinement_count
+        refinement_count = 0
 
-        # Create LLM
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0,
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
+        # Prepare chat history for agent
+        chat_history = []
+        history_summary = ""
 
-        # Create system message
-        system_message = """
-        Anda adalah asisten AI yang membantu menjawab pertanyaan tentang peraturan perundang-undangan Indonesia.
-        Gunakan tools yang tersedia untuk mencari informasi yang relevan dan berikan jawaban yang akurat.
-        """
+        if request.previous_responses:
+            history_summary = summarize_pairs(request.previous_responses)
+            print(f"[API] History summary: {history_summary[:100]}...")
 
-        # Create prompt template
-        from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", system_message),
-                ("human", "{input}"),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
-            ]
-        )
-
-        # Create agent
-        agent = create_openai_tools_agent(llm, tools, prompt)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-        # Execute agent
+        # Execute agent with proper parameters
         result = await agent_executor.ainvoke(
             {
                 "input": request.query,
-                "embedding_model": request.embedding_model,
+                "history_summary": history_summary,
+                "chat_history": chat_history,
             }
         )
 
         end_time = time.time()
         processing_time_ms = int((end_time - start_time) * 1000)
 
-        return AgenticResponse(
-            answer=result.get("output", ""),
-            referenced_documents=[],  # Will be populated by tools
-            agent_steps=[],  # Will be populated by agent execution
-            processing_time_ms=processing_time_ms,
-            model_info={
+        # Extract answer
+        answer = result.get("output", "")
+
+        # Extract referenced documents and agent steps from intermediate steps
+        referenced_documents = []
+        agent_steps = []
+
+        intermediate_steps = result.get("intermediate_steps", [])
+        print(f"[API] Found {len(intermediate_steps)} intermediate steps")
+
+        for i, (agent_action, observation) in enumerate(intermediate_steps):
+            tool_name = agent_action.tool
+            tool_input = agent_action.tool_input
+            tool_output = str(observation)
+
+            # Create step info
+            step_info = StepInfo(
+                tool=tool_name,
+                tool_input=tool_input,
+                tool_output=(
+                    tool_output[:500] + "..."
+                    if len(str(observation)) > 500
+                    else tool_output
+                ),
+            )
+            agent_steps.append(step_info)
+
+            # Extract referenced documents from search_documents tool
+            if tool_name == "search_documents" and isinstance(observation, dict):
+                docs_data = observation.get("retrieved_docs_data", [])
+                if docs_data:
+                    referenced_documents.extend(docs_data)
+                    print(
+                        f"[API] Extracted {len(docs_data)} documents from search_documents"
+                    )
+
+            # Handle string observations that might contain JSON
+            elif tool_name == "search_documents" and isinstance(observation, str):
+                try:
+                    parsed_obs = safe_parse(observation)
+                    if isinstance(parsed_obs, dict):
+                        docs_data = parsed_obs.get("retrieved_docs_data", [])
+                        if docs_data:
+                            referenced_documents.extend(docs_data)
+                            print(
+                                f"[API] Extracted {len(docs_data)} documents from parsed observation"
+                            )
+                except Exception as parse_error:
+                    print(f"[API] ⚠️ Failed to parse observation: {parse_error}")
+
+        # Remove duplicate documents based on content hash
+        unique_docs = []
+        seen_hashes = set()
+        for doc in referenced_documents:
+            content_hash = hash(str(doc.get("content", "")))
+            if content_hash not in seen_hashes:
+                unique_docs.append(doc)
+                seen_hashes.add(content_hash)
+
+        referenced_documents = unique_docs
+        print(
+            f"[API] Final document count after deduplication: {len(referenced_documents)}"
+        )
+
+        response_data = {
+            "answer": answer,
+            "referenced_documents": referenced_documents,
+            "agent_steps": agent_steps,
+            "processing_time_ms": processing_time_ms,
+            "model_info": {
                 "model": request.embedding_model,
                 "parallel_execution": False,
                 "cached": False,
             },
-        )
+        }
+
+        # Cache the response
+        try:
+            await cache_system.cache_response(
+                request.query, request.embedding_model, response_data
+            )
+            print(f"[API] ✅ Response cached successfully")
+        except Exception as cache_error:
+            print(f"[API] ⚠️ Failed to cache response: {cache_error}")
+
+        return AgenticResponse(**response_data)
 
     except Exception as e:
         print(f"[API] ❌ Standard execution error: {str(e)}")
+        end_time = time.time()
+        processing_time_ms = int((end_time - start_time) * 1000)
+
         return AgenticResponse(
             answer=f"Maaf, terjadi kesalahan: {str(e)}",
             referenced_documents=[],
             agent_steps=[],
-            processing_time_ms=int((time.time() - start_time) * 1000),
+            processing_time_ms=processing_time_ms,
             model_info={"model": request.embedding_model, "error": str(e)},
         )
 

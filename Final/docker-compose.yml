@@ -1,55 +1,21 @@
-version: "3.9"
+version: "3.8"
 
 services:
     lexmedica-chatbot:
         container_name: lexmedica-chatbot
-        build:
-            context: .
-            dockerfile: Dockerfile
+        build: .
         ports:
-            - "8080:8080" # host:container
+            - "8080:8080"
         env_file:
-            - .env # berisi API_KEY, SUPABASE_URL, dll.
-        depends_on:
-            redis:
-                condition: service_healthy
+            - .env
         environment:
-            - REDIS_URL=redis://redis:6379
+            - REDIS_URL=redis://default:NGQrDDRfRBzXmzQYSiqh0WnXW2g4ZHQw@redis-16305.c44.us-east-1-2.ec2.redns.redis-cloud.com:16305
             - PORT=8080
+        volumes:
+            - .:/app
         restart: unless-stopped
-        networks:
-            - app-network
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
             interval: 30s
             timeout: 10s
             retries: 3
-
-        # Volume mount opsional untuk hot-reload saat development
-        # volumes:
-        #   - ./:/app
-
-    redis:
-        image: redis:7-alpine
-        container_name: lexmedica-redis
-        ports:
-            - "6379:6379"
-        restart: unless-stopped
-        networks:
-            - app-network
-        healthcheck:
-            test: ["CMD", "redis-cli", "ping"]
-            interval: 10s
-            timeout: 5s
-            retries: 3
-        # Persistence untuk production + memory management
-        command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-        volumes:
-            - redis_data:/data
-
-networks:
-    app-network:
-        driver: bridge
-
-volumes:
-    redis_data:
