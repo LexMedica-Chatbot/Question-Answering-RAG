@@ -20,6 +20,10 @@ numpy>=1.24.0
 # Database
 supabase>=2.0.0
 
+# Caching (for Redis integration)
+redis>=5.0.0
+hiredis>=2.3.2
+
 # Utils
 requests>=2.31.0
 typing-extensions>=4.7.1

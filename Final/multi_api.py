@@ -3,15 +3,22 @@ import time
 import re
 import json
 import ast
+import hashlib
+import numpy as np
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Header, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security.api_key import APIKey, APIKeyHeader
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 import uvicorn
 from typing import List, Dict, Any, Optional, Literal, Union
 import secrets
 from starlette.status import HTTP_403_FORBIDDEN
+
+# Caching
+import redis
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Langchain imports
 from langchain_openai import ChatOpenAI
@@ -29,6 +36,325 @@ from supabase.client import Client, create_client
 
 # Load environment variables
 load_dotenv()
+
+# ======================= SMART CACHING SYSTEM =======================
+
+
+class SmartRAGCache:
+    """Multi-level caching system untuk RAG responses"""
+
+    def __init__(self):
+        # Redis connection dengan fallback
+        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+        try:
+            self.redis_client = redis.from_url(redis_url)
+            # Test connection
+            self.redis_client.ping()
+            self.cache_enabled = True
+            print(f"[CACHE] ✅ Connected to Redis: {redis_url}")
+        except Exception as e:
+            print(f"[CACHE] ❌ Redis connection failed: {e}")
+            print("[CACHE] 🔄 Running without cache")
+            self.cache_enabled = False
+            self.redis_client = None
+
+        # Cache settings
+        self.similarity_threshold = 0.85
+        self.exact_ttl = 3600  # 1 hour
+        self.semantic_ttl = 3600  # 1 hour
+        self.document_ttl = 7200  # 2 hours
+
+        # In-memory fallback untuk embeddings
+        self.embedding_cache = {}
+
+    async def get_cached_response(
+        self, query: str, embedding_model: str
+    ) -> Optional[Dict]:
+        """Multi-level cache lookup"""
+        if not self.cache_enabled:
+            return None
+
+        try:
+            # 🎯 LEVEL 1: Exact Query Cache (fastest)
+            exact_result = await self._get_exact_cache(query, embedding_model)
+            if exact_result:
+                print(f"[CACHE] ✅ Level 1 HIT - Exact match")
+                return exact_result
+
+            # 🧠 LEVEL 2: Semantic Similarity Cache
+            semantic_result = await self._get_semantic_cache(query, embedding_model)
+            if semantic_result:
+                print(f"[CACHE] ✅ Level 2 HIT - Semantic match")
+                return semantic_result
+
+            # 📚 LEVEL 3: Document-based Cache
+            document_result = await self._get_document_cache(query, embedding_model)
+            if document_result:
+                print(f"[CACHE] ✅ Level 3 HIT - Document match")
+                return document_result
+
+            print(f"[CACHE] ❌ MISS - Full pipeline needed")
+            return None
+
+        except Exception as e:
+            print(f"[CACHE] ⚠️ Cache lookup error: {e}")
+            return None
+
+    async def _get_exact_cache(self, query: str, model: str) -> Optional[Dict]:
+        """Level 1: Exact query matching"""
+        cache_key = f"exact:{self._get_query_hash(query, model)}"
+        cached = self.redis_client.get(cache_key)
+        if cached:
+            return json.loads(cached)
+        return None
+
+    async def _get_semantic_cache(self, query: str, model: str) -> Optional[Dict]:
+        """Level 2: Semantic similarity matching"""
+        try:
+            # Generate embedding untuk query
+            query_embedding = await self._get_query_embedding(query, model)
+            if query_embedding is None:
+                return None
+
+            # Cari cached queries dengan embedding serupa
+            cached_embeddings = self._get_cached_query_embeddings()
+
+            for cached_id, cached_embedding in cached_embeddings.items():
+                try:
+                    # Reshape untuk cosine similarity
+                    query_emb = np.array(query_embedding).reshape(1, -1)
+                    cached_emb = np.array(cached_embedding).reshape(1, -1)
+
+                    similarity = cosine_similarity(query_emb, cached_emb)[0][0]
+
+                    if similarity >= self.similarity_threshold:
+                        print(
+                            f"[CACHE] Found similar query (similarity: {similarity:.3f})"
+                        )
+                        cache_key = f"semantic:{cached_id}"
+                        cached = self.redis_client.get(cache_key)
+                        if cached:
+                            return json.loads(cached)
+
+                except Exception as e:
+                    print(f"[CACHE] Error comparing embeddings: {e}")
+                    continue
+
+        except Exception as e:
+            print(f"[CACHE] Semantic cache error: {e}")
+
+        return None
+
+    async def _get_document_cache(self, query: str, model: str) -> Optional[Dict]:
+        """Level 3: Document fingerprint matching"""
+        try:
+            # Extract key terms dari query untuk prediksi dokumen
+            key_terms = self._extract_key_terms(query)
+            if not key_terms:
+                return None
+
+            doc_fingerprint = self._create_document_fingerprint(key_terms)
+            cache_key = f"docs:{doc_fingerprint}"
+            cached_docs = self.redis_client.get(cache_key)
+
+            if cached_docs:
+                docs = json.loads(cached_docs)
+                # Return cached documents dengan generated answer flag
+                return {
+                    "answer": f"Berdasarkan dokumen yang relevan dengan query Anda: {query}",
+                    "referenced_documents": docs,
+                    "cache_level": "document",
+                    "model_info": {"model": model, "cached": True},
+                }
+
+        except Exception as e:
+            print(f"[CACHE] Document cache error: {e}")
+
+        return None
+
+    async def cache_response(self, query: str, model: str, response: Dict):
+        """Cache response di multiple levels"""
+        if not self.cache_enabled:
+            return
+
+        try:
+            # Gunakan encoder aman untuk semua tipe data
+            safe = jsonable_encoder(
+                response, custom_encoder={StepInfo: lambda x: x.dict()}
+            )
+            # Level 1: Exact cache
+            exact_key = f"exact:{self._get_query_hash(query, model)}"
+            self.redis_client.setex(exact_key, self.exact_ttl, json.dumps(safe))
+
+            # Level 2: Semantic cache
+            query_embedding = await self._get_query_embedding(query, model)
+            if query_embedding is not None:
+                semantic_id = hashlib.md5(str(query_embedding).encode()).hexdigest()[
+                    :16
+                ]
+                embedding_key = f"embedding:{semantic_id}"
+                self.redis_client.setex(
+                    embedding_key,
+                    self.semantic_ttl,
+                    json.dumps(
+                        query_embedding.tolist()
+                        if hasattr(query_embedding, "tolist")
+                        else query_embedding
+                    ),
+                )
+                semantic_key = f"semantic:{semantic_id}"
+                self.redis_client.setex(
+                    semantic_key, self.semantic_ttl, json.dumps(safe)
+                )
+
+            # Level 3: Document cache
+            if "referenced_documents" in safe and safe["referenced_documents"]:
+                docs = safe["referenced_documents"]
+                key_terms = self._extract_key_terms(query)
+                if key_terms:
+                    doc_fingerprint = self._create_document_fingerprint(key_terms)
+                    doc_key = f"docs:{doc_fingerprint}"
+                    self.redis_client.setex(
+                        doc_key, self.document_ttl, json.dumps(docs)
+                    )
+
+            print(f"[CACHE] ✅ Response cached successfully")
+
+        except Exception as e:
+            print(f"[CACHE] ⚠️ Cache storage error: {e}")
+
+    def _get_query_hash(self, query: str, model: str) -> str:
+        """Generate hash untuk exact query matching"""
+        return hashlib.md5(f"{query.lower().strip()}_{model}".encode()).hexdigest()
+
+    async def _get_query_embedding(
+        self, query: str, model: str
+    ) -> Optional[List[float]]:
+        """Generate embedding untuk query dengan caching"""
+        cache_key = f"emb:{self._get_query_hash(query, model)}"
+
+        # Check in-memory cache dulu
+        if cache_key in self.embedding_cache:
+            return self.embedding_cache[cache_key]
+
+        try:
+            # Generate embedding menggunakan existing function
+            embeddings = get_embeddings(model)
+            query_embedding = embeddings.embed_query(query)
+
+            # Cache in memory untuk request berikutnya
+            self.embedding_cache[cache_key] = query_embedding
+
+            # Limit in-memory cache size
+            if len(self.embedding_cache) > 100:
+                # Remove oldest entries
+                oldest_keys = list(self.embedding_cache.keys())[:20]
+                for key in oldest_keys:
+                    del self.embedding_cache[key]
+
+            return query_embedding
+
+        except Exception as e:
+            print(f"[CACHE] Embedding generation error: {e}")
+            return None
+
+    def _get_cached_query_embeddings(self) -> Dict[str, List[float]]:
+        """Ambil semua cached embeddings untuk similarity search"""
+        embeddings = {}
+        try:
+            # Get all embedding keys
+            embedding_keys = self.redis_client.keys("embedding:*")
+            for key in embedding_keys[:50]:  # Limit untuk performa
+                try:
+                    cached_data = self.redis_client.get(key)
+                    if cached_data:
+                        embedding = json.loads(cached_data)
+                        embedding_id = key.decode().split(":")[-1]
+                        embeddings[embedding_id] = embedding
+                except Exception as e:
+                    print(f"[CACHE] Error loading embedding {key}: {e}")
+                    continue
+        except Exception as e:
+            print(f"[CACHE] Error getting cached embeddings: {e}")
+
+        return embeddings
+
+    def _extract_key_terms(self, query: str) -> List[str]:
+        """Extract key legal terms untuk document fingerprinting"""
+        legal_terms = []
+        query_lower = query.lower()
+
+        # Pattern untuk jenis peraturan
+        peraturan_patterns = [
+            r"(uu|undang-undang)\s*no\.?\s*(\d+)",
+            r"(pp|peraturan pemerintah)\s*no\.?\s*(\d+)",
+            r"(permenkes|peraturan menteri kesehatan)\s*no\.?\s*(\d+)",
+            r"(kepmenkes|keputusan menteri kesehatan)\s*no\.?\s*(\d+)",
+            r"pasal\s*(\d+)",
+        ]
+
+        for pattern in peraturan_patterns:
+            matches = re.findall(pattern, query_lower)
+            for match in matches:
+                if isinstance(match, tuple):
+                    legal_terms.append(f"{match[0]}_{match[1]}")
+                else:
+                    legal_terms.append(match)
+
+        # Key terms umum bidang kesehatan
+        key_words = [
+            "kesehatan",
+            "medis",
+            "rumah sakit",
+            "dokter",
+            "pasien",
+            "obat",
+            "informed consent",
+            "rekam medis",
+            "fasilitas kesehatan",
+            "tenaga kesehatan",
+            "pelayanan kesehatan",
+            "kode etik",
+            "standar profesi",
+            "komite medik",
+        ]
+
+        for word in key_words:
+            if word in query_lower:
+                legal_terms.append(word.replace(" ", "_"))
+
+        return list(set(legal_terms))  # Remove duplicates
+
+    def _create_document_fingerprint(self, key_terms: List[str]) -> str:
+        """Create fingerprint dari key terms"""
+        if not key_terms:
+            return "empty"
+        sorted_terms = sorted(set(key_terms))
+        return hashlib.md5("_".join(sorted_terms).encode()).hexdigest()[:16]
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics"""
+        if not self.cache_enabled:
+            return {"enabled": False}
+
+        try:
+            info = self.redis_client.info()
+            return {
+                "enabled": True,
+                "connected_clients": info.get("connected_clients", 0),
+                "used_memory_human": info.get("used_memory_human", "0B"),
+                "total_keys": len(self.redis_client.keys("*")),
+                "exact_cache_keys": len(self.redis_client.keys("exact:*")),
+                "semantic_cache_keys": len(self.redis_client.keys("semantic:*")),
+                "document_cache_keys": len(self.redis_client.keys("docs:*")),
+                "embedding_cache_keys": len(self.redis_client.keys("embedding:*")),
+            }
+        except Exception as e:
+            return {"enabled": True, "error": str(e)}
+
+
+# Initialize cache system
+cache_system = SmartRAGCache()
 
 
 def safe_parse(payload: str) -> Dict[str, Any]:
@@ -1188,6 +1514,45 @@ async def agentic_chat(request: AgenticRequest):
         start_time = time.time()
         print(f"\n[API] Processing chat request: {request.query}")
 
+        # 🚀 STEP 1: Check Cache First
+        cached_response = await cache_system.get_cached_response(
+            request.query, request.embedding_model
+        )
+
+        if cached_response:
+            # Calculate processing time untuk cache hit
+            end_time = time.time()
+            processing_time_ms = int((end_time - start_time) * 1000)
+
+            # Add cache info to model_info
+            cached_response["processing_time_ms"] = processing_time_ms
+            if "model_info" not in cached_response:
+                cached_response["model_info"] = {}
+            cached_response["model_info"]["cached"] = True
+            cached_response["model_info"]["cache_level"] = cached_response.get(
+                "cache_level", "unknown"
+            )
+
+            # Convert agent_steps back to StepInfo objects if present
+            if "agent_steps" in cached_response and cached_response["agent_steps"]:
+                agent_steps = [
+                    StepInfo(
+                        tool=step["tool"],
+                        tool_input=step["tool_input"],
+                        tool_output=step["tool_output"],
+                    )
+                    for step in cached_response["agent_steps"]
+                ]
+                cached_response["agent_steps"] = agent_steps
+
+            print(
+                f"[API] ✅ Cache HIT - Returning cached response ({processing_time_ms}ms)"
+            )
+            return AgenticResponse(**cached_response)
+
+        # 🔄 STEP 2: Cache MISS - Execute Full Pipeline
+        print(f"[API] ❌ Cache MISS - Executing full pipeline")
+
         # Dapatkan nama tabel dan model
         table_name = EMBEDDING_CONFIG[request.embedding_model]["table"]
         model_name = EMBEDDING_CONFIG[request.embedding_model]["model"]
@@ -1296,15 +1661,48 @@ async def agentic_chat(request: AgenticRequest):
             "model": model_name,
             "table": table_name,
             "dimensions": embedding_dimensions,
+            "cached": False,  # This is a fresh response
         }
 
-        return AgenticResponse(
-            answer=answer,
-            referenced_documents=referenced_documents,
-            agent_steps=agent_steps,
-            processing_time_ms=processing_time_ms,
-            model_info=model_info,
-        )
+        # Prepare response object
+        response_data = {
+            "answer": answer,
+            "referenced_documents": referenced_documents,
+            "agent_steps": agent_steps,
+            "processing_time_ms": processing_time_ms,
+            "model_info": model_info,
+        }
+
+        # 💾 STEP 3: Cache the Response
+        try:
+            # Create a serializable copy for caching (exclude agent_steps entirely)
+            print(f"[CACHE] 🔄 Preparing cache data...")
+            cache_data = {
+                "answer": answer,
+                "referenced_documents": referenced_documents,
+                "processing_time_ms": processing_time_ms,
+                "model_info": model_info,
+                # Don't cache agent_steps - too complex and not needed for cache hit
+            }
+
+            print(f"[CACHE] 🧪 Testing JSON serialization...")
+            # Test JSON serialization before caching
+            json.dumps(cache_data)
+            print(f"[CACHE] ✅ JSON serialization test passed")
+
+            print(f"[CACHE] 🚀 Calling cache_response...")
+            await cache_system.cache_response(
+                request.query, request.embedding_model, cache_data
+            )
+            print(f"[CACHE] 🎉 cache_response completed!")
+        except Exception as cache_error:
+            print(f"[CACHE] ⚠️ Failed to cache response: {cache_error}")
+            import traceback
+
+            print(f"[CACHE] 🔍 Traceback: {traceback.format_exc()}")
+            # Continue even if caching fails
+
+        return AgenticResponse(**response_data)
 
     except Exception as e:
         print(f"[ERROR] Exception in chat endpoint: {str(e)}")
@@ -1330,6 +1728,28 @@ async def available_models():
             for model_key, config in EMBEDDING_CONFIG.items()
         }
     }
+
+
+@app.get("/api/cache/stats", dependencies=[Depends(verify_api_key)])
+async def get_cache_stats():
+    """Get cache statistics for monitoring"""
+    return cache_system.get_cache_stats()
+
+
+@app.delete("/api/cache/clear", dependencies=[Depends(verify_api_key)])
+async def clear_cache():
+    """Clear all cache (use with caution)"""
+    if cache_system.cache_enabled:
+        try:
+            # Clear all cache keys
+            cache_system.redis_client.flushdb()
+            # Clear in-memory embedding cache
+            cache_system.embedding_cache.clear()
+            return {"status": "success", "message": "Cache cleared successfully"}
+        except Exception as e:
+            return {"status": "error", "message": f"Failed to clear cache: {str(e)}"}
+    else:
+        return {"status": "disabled", "message": "Cache is not enabled"}
 
 
 # Run the API server
