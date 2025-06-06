@@ -669,8 +669,8 @@ async def verify_api_key(
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Sistem Agentic RAG Executor",
-    description="API untuk sistem RAG dokumen hukum dengan pendekatan Agentic Executor",
+    title="Enhanced Multi-Step RAG System",
+    description="API untuk sistem RAG dokumen hukum dengan pendekatan Enhanced Multi-Step RAG",
     version="1.0.0",
 )
 
@@ -992,7 +992,7 @@ def extract_legal_entities(docs):
     return list(entities)
 
 
-# ======================= AGENT TOOLS DEFINITION =======================
+# ======================= MULTI-STEP RAG TOOLS DEFINITION =======================
 
 
 # Tambahkan fungsi sanitasi karakter kontrol
@@ -1665,9 +1665,9 @@ Silakan coba pertanyaan lain yang lebih spesifik atau dengan kata kunci yang ber
 4. Coba formulasikan pertanyaan dengan cara berbeda"""
 
 
-# ======================= AGENT DEFINITION =======================
+# ======================= MULTI-STEP RAG DEFINITION =======================
 
-# Setup system prompt for the agent
+# Setup system prompt for the multi-step RAG
 system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
 
 TUGAS ANDA:
@@ -1704,7 +1704,7 @@ INGAT:
 2. JANGAN melakukan penyempurnaan query lebih dari sekali
 3. Lebih baik memberikan jawaban berdasarkan dokumen yang ada daripada terus melakukan evaluasi"""
 
-# Create the agent with tools
+# Create the multi-step RAG with tools
 tools = [
     search_documents,
     refine_query,
@@ -1723,10 +1723,10 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# Buat agent dengan parameter optimize= untuk performa
+# Buat multi-step RAG dengan parameter optimize= untuk performa
 agent = create_openai_tools_agent(llm, tools, prompt)
 
-# Create agent executor with faster execution settings
+# Create multi-step RAG executor with faster execution settings
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
@@ -1743,7 +1743,7 @@ refinement_count = 0
 # ======================= API MODELS =======================
 
 
-class AgenticRequest(BaseModel):
+class MultiStepRAGRequest(BaseModel):
     query: str
     embedding_model: Literal["small", "large"] = "large"
     previous_responses: List[Union[List[str], Dict[str, Any], str]] = Field(
@@ -1767,10 +1767,10 @@ class CitationInfo(BaseModel):
     source_text: str
 
 
-class AgenticResponse(BaseModel):
+class MultiStepRAGResponse(BaseModel):
     answer: str
     referenced_documents: List[Dict[str, Any]] = []
-    agent_steps: Optional[List[StepInfo]] = None
+    processing_steps: Optional[List[StepInfo]] = None
     processing_time_ms: Optional[int] = None
     model_info: Dict[str, Any] = {}  # Tambahkan model_info
 
@@ -1780,10 +1780,10 @@ class AgenticResponse(BaseModel):
 
 @app.post(
     "/api/chat",
-    response_model=AgenticResponse,
+    response_model=MultiStepRAGResponse,
     dependencies=[Depends(verify_api_key)],
 )
-async def agentic_chat(request: AgenticRequest):
+async def multi_step_rag_chat(request: MultiStepRAGRequest):
     start_time = time.time()
     print(f"\n[API] 📝 New request: {request.query}")
     print(f"[API] 🔍 Debug - use_parallel_execution: {request.use_parallel_execution}")
@@ -1800,10 +1800,21 @@ async def agentic_chat(request: AgenticRequest):
             end_time = time.time()
             processing_time_ms = int((end_time - start_time) * 1000)
 
-            return AgenticResponse(
+            # Restore processing_steps from cache
+            cached_steps = cached_response.get("processing_steps", [])
+            processing_steps = []
+            
+            # Convert cached step dicts back to StepInfo objects
+            for step in cached_steps:
+                if isinstance(step, dict):
+                    processing_steps.append(StepInfo(**step))
+                elif hasattr(step, 'tool'):  # Already a StepInfo object
+                    processing_steps.append(step)
+            
+            return MultiStepRAGResponse(
                 answer=cached_response.get("answer", ""),
                 referenced_documents=cached_response.get("referenced_documents", []),
-                agent_steps=cached_response.get("agent_steps", []),
+                processing_steps=processing_steps,
                 processing_time_ms=processing_time_ms,
                 model_info={
                     "model": request.embedding_model,
@@ -1851,8 +1862,8 @@ async def agentic_chat(request: AgenticRequest):
                     )
                     print(f"[API] 🔍 Debug - Answer length: {len(answer)}")
 
-                    # Create synthetic agent steps for parallel execution
-                    agent_steps = [
+                    # Create synthetic processing steps for parallel execution
+                    processing_steps = [
                         StepInfo(
                             tool="enhanced_search_documents",
                             tool_input={"query": request.query},
@@ -1868,7 +1879,7 @@ async def agentic_chat(request: AgenticRequest):
                     response_data = {
                         "answer": answer,
                         "referenced_documents": referenced_documents,
-                        "agent_steps": agent_steps,
+                        "processing_steps": processing_steps,
                         "processing_time_ms": processing_time_ms,
                         "model_info": {
                             "model": request.embedding_model,
@@ -1894,7 +1905,7 @@ async def agentic_chat(request: AgenticRequest):
                     print(
                         f"[API] 🔍 Debug - Returning parallel response with parallel_execution=True"
                     )
-                    return AgenticResponse(**response_data)
+                    return MultiStepRAGResponse(**response_data)
                 else:
                     print(
                         f"[API] ⚠️ Parallel execution failed: {parallel_result.get('error')}"
@@ -1916,10 +1927,10 @@ async def agentic_chat(request: AgenticRequest):
 
     except Exception as e:
         print(f"[API] ❌ Error: {str(e)}")
-        return AgenticResponse(
+        return MultiStepRAGResponse(
             answer=f"Maaf, terjadi kesalahan: {str(e)}",
             referenced_documents=[],
-            agent_steps=[],
+            processing_steps=[],
             processing_time_ms=int((time.time() - start_time) * 1000),
             model_info={"model": request.embedding_model, "error": str(e)},
         )
@@ -1927,7 +1938,7 @@ async def agentic_chat(request: AgenticRequest):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "system": "agentic RAG executor"}
+    return {"status": "healthy", "system": "Enhanced Multi-Step RAG"}
 
 
 @app.get("/api/models", dependencies=[Depends(verify_api_key)])
@@ -1966,7 +1977,7 @@ async def clear_cache():
 
 
 @app.post("/api/chat/parallel", dependencies=[Depends(verify_api_key)])
-async def test_parallel_execution(request: AgenticRequest):
+async def test_parallel_execution(request: MultiStepRAGRequest):
     """
     Test endpoint specifically for parallel execution features
     Demonstrates 30-40% speed improvement over standard execution
@@ -2020,8 +2031,8 @@ async def test_parallel_execution(request: AgenticRequest):
 
 
 async def standard_execution(
-    request: AgenticRequest, start_time: float = None
-) -> AgenticResponse:
+    request: MultiStepRAGRequest, start_time: float = None
+) -> MultiStepRAGResponse:
     """
     Standard execution mode without parallel processing
     """
@@ -2035,7 +2046,7 @@ async def standard_execution(
         global refinement_count
         refinement_count = 0
 
-        # Prepare chat history for agent
+        # Prepare chat history for multi-step RAG
         chat_history = []
         history_summary = ""
 
@@ -2043,7 +2054,7 @@ async def standard_execution(
             history_summary = summarize_pairs(request.previous_responses)
             print(f"[API] History summary: {history_summary[:100]}...")
 
-        # Execute agent with proper parameters
+        # Execute multi-step RAG with proper parameters
         result = await agent_executor.ainvoke(
             {
                 "input": request.query,
@@ -2058,9 +2069,9 @@ async def standard_execution(
         # Extract answer
         answer = result.get("output", "")
 
-        # Extract referenced documents and agent steps from intermediate steps
+        # Extract referenced documents and processing steps from intermediate steps
         referenced_documents = []
-        agent_steps = []
+        processing_steps = []
 
         intermediate_steps = result.get("intermediate_steps", [])
         print(f"[API] Found {len(intermediate_steps)} intermediate steps")
@@ -2080,7 +2091,7 @@ async def standard_execution(
                     else tool_output
                 ),
             )
-            agent_steps.append(step_info)
+            processing_steps.append(step_info)
 
             # Extract referenced documents from search_documents tool
             if tool_name == "search_documents" and isinstance(observation, dict):
@@ -2122,7 +2133,7 @@ async def standard_execution(
         response_data = {
             "answer": answer,
             "referenced_documents": referenced_documents,
-            "agent_steps": agent_steps,
+            "processing_steps": processing_steps,
             "processing_time_ms": processing_time_ms,
             "model_info": {
                 "model": request.embedding_model,
@@ -2140,17 +2151,17 @@ async def standard_execution(
         except Exception as cache_error:
             print(f"[API] ⚠️ Failed to cache response: {cache_error}")
 
-        return AgenticResponse(**response_data)
+        return MultiStepRAGResponse(**response_data)
 
     except Exception as e:
         print(f"[API] ❌ Standard execution error: {str(e)}")
         end_time = time.time()
         processing_time_ms = int((end_time - start_time) * 1000)
 
-        return AgenticResponse(
+        return MultiStepRAGResponse(
             answer=f"Maaf, terjadi kesalahan: {str(e)}",
             referenced_documents=[],
-            agent_steps=[],
+            processing_steps=[],
             processing_time_ms=processing_time_ms,
             model_info={"model": request.embedding_model, "error": str(e)},
         )

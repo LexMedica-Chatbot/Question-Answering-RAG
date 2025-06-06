@@ -17,8 +17,8 @@ question-answering-rag/
 ├── docker-compose.yml          # Multi-container setup
 ├── src/                        # Source code utama
 │   ├── api/                    # API endpoints
-│   │   ├── multi_api.py        # Multi-model API
-│   │   └── simple_api.py       # Simple API
+│   │   ├── multi_api.py        # Enhanced Multi-Step RAG
+│   │   └── simple_api.py       # Basic RAG Pipeline
 │   ├── ingestion/              # Data ingestion modules
 │   │   ├── ingest_in_db.py     # Database ingestion
 │   │   ├── ingest_in_csv_db.py # CSV database ingestion
@@ -27,7 +27,7 @@ question-answering-rag/
 │   │   ├── export_pasal_csv.py # Export articles to CSV
 │   │   └── export_pasal_tanpa_bab.py
 │   └── demo/                   # Demo applications
-│       ├── demo_simple.py      # Simple demo
+│       ├── demo_simple.py      # Basic RAG Pipeline demo
 │       └── main.py             # Main application
 ├── data/                       # Data directory
 │   ├── raw/                    # Raw PDF files
@@ -83,10 +83,10 @@ question-answering-rag/
 #### API Server
 
 ```bash
-# Simple API
+# Basic RAG Pipeline
 python src/api/simple_api.py
 
-# Multi-model API
+# Enhanced Multi-Step RAG
 python src/api/multi_api.py
 ```
 
@@ -140,7 +140,7 @@ docker-compose up --build
 ## 🎯 Features
 
 -   ✅ **Modular Architecture** - Kode terorganisir dalam modules yang jelas
--   ✅ **Multiple APIs** - Simple dan Multi-model API endpoints
+-   ✅ **Multiple APIs** - Basic RAG Pipeline dan Enhanced Multi-Step RAG endpoints
 -   ✅ **Docker Support** - Containerized deployment
 -   ✅ **Data Pipeline** - Automated ingestion dan processing
 -   ✅ **Testing Framework** - Unit tests dengan pytest
@@ -157,7 +157,7 @@ Jika Anda memiliki kode yang menggunakan struktur lama:
 from Final.simple_api import app
 from Final.ingest_in_db import ingest_data
 
-# Baru
+# Baru - Basic RAG Pipeline
 from src.api.simple_api import app
 from src.ingestion.ingest_in_db import ingest_data
 ```

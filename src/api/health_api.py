@@ -79,7 +79,7 @@ async def api_info():
     return {
         "api_name": "Health Check API",
         "version": "1.0.0",
-        "description": "Simple API untuk testing struktur project",
+        "description": "Basic RAG Pipeline untuk testing struktur project",
         "python_path": __file__,
         "available_endpoints": {
             "GET /": "Root endpoint",

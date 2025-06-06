@@ -552,7 +552,7 @@ async def chat(request: ChatRequest):
 
         # Get relevant documents using combined query
         try:
-            docs = retriever.get_relevant_documents(combined_query)
+            docs = retriever.invoke(combined_query)
             print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
 
             if docs:

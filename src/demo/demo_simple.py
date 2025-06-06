@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🚀 SIMPLE PARALLEL EXECUTION DEMO
+🚀 BASIC RAG PIPELINE PARALLEL EXECUTION DEMO
 Perbandingan sederhana antara Standard vs Parallel execution
 """
 
@@ -32,7 +32,7 @@ def save_results(standard_result, parallel_result, comparison):
             "parallel_used": standard_result.get("parallel_used", False),
             "cached": standard_result.get("cached", False),
             "answer": standard_result.get("answer", ""),
-            "agent_steps": standard_result.get("agent_steps", []),
+            "processing_steps": standard_result.get("processing_steps", []),
             "referenced_documents": standard_result.get("referenced_documents", []),
         },
         "parallel_execution": {
@@ -42,7 +42,7 @@ def save_results(standard_result, parallel_result, comparison):
             "parallel_used": parallel_result.get("parallel_used", False),
             "cached": parallel_result.get("cached", False),
             "answer": parallel_result.get("answer", ""),
-            "agent_steps": parallel_result.get("agent_steps", []),
+            "processing_steps": parallel_result.get("processing_steps", []),
             "referenced_documents": parallel_result.get("referenced_documents", []),
         },
         "comparison": {
@@ -117,7 +117,7 @@ def test_execution(use_parallel=True):
                 "parallel_used": model_info.get("parallel_execution", False),
                 "cached": model_info.get("cached", False),
                 "answer": data.get("answer", ""),
-                "agent_steps": data.get("agent_steps", []),
+                "processing_steps": data.get("processing_steps", []),
                 "referenced_documents": data.get("referenced_documents", []),
             }
         else:

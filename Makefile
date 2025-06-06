@@ -29,25 +29,25 @@ clean: ## Clean cache and build files
 	rm -rf build/
 	rm -rf dist/
 
-run-api: ## Run simple API server
+run-api: ## Run Basic RAG Pipeline server
 	PYTHONPATH=. python -m src.api.simple_api
 
-run-multi-api: ## Run multi-model API server
+run-multi-api: ## Run Enhanced Multi-Step RAG server
 	PYTHONPATH=. python -m src.api.multi_api
 
 run-demo: ## Run demo application
 	PYTHONPATH=. python -m src.demo.demo_simple
 
-run-api-direct: ## Run simple API server (direct method)
+run-api-direct: ## Run Basic RAG Pipeline server (direct method)
 	cd src/api && python simple_api.py
 
-run-multi-api-direct: ## Run multi-model API server (direct method)
+run-multi-api-direct: ## Run Enhanced Multi-Step RAG server (direct method)
 	cd src/api && python multi_api.py
 
 run-demo-direct: ## Run demo application (direct method)
 	cd src/demo && python demo_simple.py
 
-run-health: ## Run simple health check API (for testing)
+run-health: ## Run basic health check API (for testing)
 	PYTHONPATH=. python -m src.api.health_api
 
 docker-build: ## Build Docker image
