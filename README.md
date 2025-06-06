@@ -147,6 +147,45 @@ docker-compose up --build
 -   ✅ **Code Quality** - Black, flake8, isort, mypy
 -   ✅ **Documentation** - Comprehensive docs dan API reference
 -   ✅ **Development Tools** - Makefile untuk automation
+-   ✅ **LangFuse Observability** - Cost tracking, token monitoring, performance analytics
+
+## 📊 LangFuse Observability - RAG Analytics
+
+Sistem menggunakan **LangFuse** untuk monitoring yang fokus pada **cost, token usage, dan RAG performance**.
+
+### 🎯 **Metrics yang Ditrack**
+
+-   **💰 Cost tracking**: Biaya real-time per request (USD)
+-   **🔢 Token usage**: Input/output tokens setiap call
+-   **📄 Document retrieval**: Jumlah dokumen yang diambil
+-   **⚡ Response time**: End-to-end processing time
+-   **🎨 Model comparison**: Large vs small embedding models
+
+### 🚀 **5-Minute Setup**
+
+```bash
+# 1. Daftar di https://cloud.langfuse.com (gratis)
+# 2. Buat project baru
+# 3. Copy API keys ke .env:
+LANGFUSE_PUBLIC_KEY=pk-lf-your-key-here
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-here
+
+# 4. Restart application
+docker compose up --build -d
+
+# 5. Check status
+curl http://localhost:8080/api/observability
+```
+
+### 🖥️ **Beautiful Dashboard**
+
+-   **Real-time cost monitoring** - Track spending per request
+-   **Token usage analytics** - Optimize model efficiency
+-   **Performance benchmarks** - Response time analysis
+-   **Query pattern analysis** - Most asked questions
+-   **Perfect untuk research insights!** 📊
+
+📖 **Setup guide lengkap**: [SETUP_LANGFUSE.md](SETUP_LANGFUSE.md)
 
 ## 🔄 Migration dari Struktur Lama
 

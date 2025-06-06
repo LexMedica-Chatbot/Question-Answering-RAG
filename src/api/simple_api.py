@@ -26,6 +26,38 @@ from supabase.client import Client, create_client
 # Load environment variables
 load_dotenv()
 
+# LangFuse Observability (Simple & Focused on RAG)
+try:
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    from observability.langfuse_config import (
+        track_rag_session, track_document_retrieval, 
+        track_llm_call, finalize_rag_session, CostTracker, langfuse_tracker
+    )
+    LANGFUSE_ENABLED = langfuse_tracker.enabled
+    print(f"✅ LangFuse observability: {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
+except ImportError as e:
+    print(f"⚠️  LangFuse not available: {e}")
+    LANGFUSE_ENABLED = False
+    
+    # Create dummy functions
+    def track_rag_session(*args, **kwargs):
+        return None
+    
+    def track_document_retrieval(*args, **kwargs):
+        return None
+    
+    def track_llm_call(*args, **kwargs):
+        return None
+    
+    def finalize_rag_session(*args, **kwargs):
+        pass
+    
+    class CostTracker:
+        @classmethod
+        def calculate_cost(cls, *args, **kwargs):
+            return 0.0
+
 # Security settings - Simplifikasi keamanan
 API_KEY_NAME = "X-API-Key"
 API_KEY = os.environ.get("API_KEY", secrets.token_urlsafe(32))
@@ -500,10 +532,15 @@ async def chat(request: ChatRequest):
 
     try:
         start_time = time.time()  # Tambahkan waktu mulai
+        
+        # Start LangFuse session tracking
+        langfuse_trace = track_rag_session(request.query, request.embedding_model)
+        
         print(f"[DEBUG] Request details:")
         print(f"- Query: {request.query}")
         print(f"- Embedding model: {request.embedding_model}")
         print(f"- Previous responses: {len(request.previous_responses)}")
+        print(f"- LangFuse tracking: {'enabled' if langfuse_trace else 'disabled'}")
 
         # Validasi model
         if request.embedding_model not in EMBEDDING_CONFIG:
@@ -554,6 +591,15 @@ async def chat(request: ChatRequest):
         try:
             docs = retriever.invoke(combined_query)
             print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
+            
+            # Track document retrieval
+            track_document_retrieval(
+                trace=langfuse_trace,
+                query=combined_query,
+                model=model_name,
+                num_docs=len(docs),
+                docs=[doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content for doc in docs[:2]]
+            )
 
             if docs:
                 print("[DEBUG] Sample document info:")
@@ -589,6 +635,23 @@ async def chat(request: ChatRequest):
             }
             answer = rag_chain.invoke(chain_input)
             print("[DEBUG] Successfully generated answer")
+            
+            # Track LLM call (approximate token usage)
+            estimated_input_tokens = len(f"{history_text} {request.query} {format_docs(docs)}".split()) * 1.3
+            estimated_output_tokens = len(answer.split()) * 1.3
+            
+            track_llm_call(
+                trace=langfuse_trace,
+                model="gpt-4.1-mini",
+                messages=[{"role": "user", "content": request.query}],
+                response=answer,
+                usage={
+                    "prompt_tokens": int(estimated_input_tokens),
+                    "completion_tokens": int(estimated_output_tokens),
+                    "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                }
+            )
+            
         except Exception as e:
             print(f"[ERROR] Answer generation failed: {str(e)}")
             raise HTTPException(
@@ -605,6 +668,20 @@ async def chat(request: ChatRequest):
         # Hitung waktu pemrosesan
         end_time = time.time()
         processing_time_ms = int((end_time - start_time) * 1000)
+        
+        # Finalize LangFuse tracking
+        estimated_cost = CostTracker.calculate_cost(
+            "gpt-4.1-mini", 
+            int(estimated_input_tokens), 
+            int(estimated_output_tokens)
+        )
+        
+        finalize_rag_session(
+            trace=langfuse_trace,
+            final_answer=answer,
+            processing_time_ms=processing_time_ms,
+            estimated_cost=estimated_cost
+        )
 
         print("[DEBUG] Request completed successfully")
         print("=" * 50 + "\n")
@@ -644,6 +721,45 @@ async def available_models():
             for model_key, config in EMBEDDING_CONFIG.items()
         }
     }
+
+# LangFuse observability endpoint
+@app.get("/api/observability")
+async def get_observability_status():
+    """Get observability status and LangFuse info"""
+    if LANGFUSE_ENABLED:
+        return {
+            "status": "enabled",
+            "provider": "LangFuse",
+            "dashboard_url": "https://cloud.langfuse.com",
+            "features": [
+                "Cost tracking per request",
+                "Token usage monitoring", 
+                "Document retrieval metrics",
+                "End-to-end RAG session tracking",
+                "Performance analytics"
+            ],
+            "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
+            "metrics_tracked": {
+                "cost_per_request": "USD cost for LLM calls",
+                "token_usage": "Input/output tokens for each request",
+                "document_retrieval": "Number of documents retrieved",
+                "response_time": "End-to-end processing time",
+                "embedding_model": "Which embedding model used"
+            }
+        }
+    else:
+        return {
+            "status": "disabled",
+            "message": "LangFuse observability not configured",
+            "setup_instructions": [
+                "1. Get free account at https://cloud.langfuse.com",
+                "2. Create new project and get API keys",
+                "3. Set environment variables:",
+                "   - LANGFUSE_PUBLIC_KEY=pk-...",
+                "   - LANGFUSE_SECRET_KEY=sk-...", 
+                "4. Restart application"
+            ]
+        }
 
 
 # Run the API server

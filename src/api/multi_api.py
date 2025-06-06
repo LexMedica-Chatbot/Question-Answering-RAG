@@ -40,6 +40,38 @@ from supabase.client import Client, create_client
 # Load environment variables
 load_dotenv()
 
+# LangFuse Observability (Simple & Focused on RAG)
+try:
+    import sys
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+    from observability.langfuse_config import (
+        track_rag_session, track_document_retrieval, 
+        track_llm_call, finalize_rag_session, CostTracker, langfuse_tracker
+    )
+    LANGFUSE_ENABLED = langfuse_tracker.enabled
+    print(f"✅ LangFuse observability (Multi-Step): {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
+except ImportError as e:
+    print(f"⚠️  LangFuse not available: {e}")
+    LANGFUSE_ENABLED = False
+    
+    # Create dummy functions
+    def track_rag_session(*args, **kwargs):
+        return None
+    
+    def track_document_retrieval(*args, **kwargs):
+        return None
+    
+    def track_llm_call(*args, **kwargs):
+        return None
+    
+    def finalize_rag_session(*args, **kwargs):
+        pass
+    
+    class CostTracker:
+        @classmethod
+        def calculate_cost(cls, *args, **kwargs):
+            return 0.0
+
 # ======================= SMART CACHING SYSTEM =======================
 
 
@@ -1787,6 +1819,10 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
     start_time = time.time()
     print(f"\n[API] 📝 New request: {request.query}")
     print(f"[API] 🔍 Debug - use_parallel_execution: {request.use_parallel_execution}")
+    
+    # Start LangFuse session tracking for Multi-Step RAG
+    langfuse_trace = track_rag_session(request.query, request.embedding_model)
+    print(f"[API] 📊 LangFuse tracking: {'enabled' if langfuse_trace else 'disabled'}")
 
     try:
         # 🚀 STEP 1: Check cache first
@@ -1893,6 +1929,45 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                         },
                     }
 
+                    # Track document retrieval for parallel execution
+                    track_document_retrieval(
+                        trace=langfuse_trace,
+                        query=request.query,
+                        model=request.embedding_model,
+                        num_docs=len(referenced_documents),
+                        docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
+                    )
+                    
+                    # Track LLM call for parallel execution
+                    estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
+                    estimated_output_tokens = len(answer.split()) * 1.3
+                    
+                    track_llm_call(
+                        trace=langfuse_trace,
+                        model="gpt-4.1-mini",
+                        messages=[{"role": "user", "content": request.query}],
+                        response=answer,
+                        usage={
+                            "prompt_tokens": int(estimated_input_tokens),
+                            "completion_tokens": int(estimated_output_tokens),
+                            "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                        }
+                    )
+                    
+                    # Finalize LangFuse tracking for parallel execution
+                    estimated_cost = CostTracker.calculate_cost(
+                        "gpt-4.1-mini", 
+                        int(estimated_input_tokens), 
+                        int(estimated_output_tokens)
+                    )
+                    
+                    finalize_rag_session(
+                        trace=langfuse_trace,
+                        final_answer=answer,
+                        processing_time_ms=processing_time_ms,
+                        estimated_cost=estimated_cost
+                    )
+
                     # Cache the response
                     try:
                         await cache_system.cache_response(
@@ -1912,18 +1987,18 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                     )
                     # Fallback to standard execution
                     print(f"[API] 🔍 Debug - Falling back to standard execution")
-                    return await standard_execution(request, start_time)
+                    return await standard_execution(request, start_time, langfuse_trace)
             except Exception as e:
                 print(
                     f"[API] ⚠️ Parallel execution error: {str(e)}, falling back to standard mode"
                 )
                 print(f"[API] 🔍 Debug - Exception in parallel mode, falling back")
-                return await standard_execution(request, start_time)
+                return await standard_execution(request, start_time, langfuse_trace)
         else:
             print(
                 f"[API] 🔍 Debug - use_parallel_execution is False, using standard mode"
             )
-            return await standard_execution(request, start_time)
+            return await standard_execution(request, start_time, langfuse_trace)
 
     except Exception as e:
         print(f"[API] ❌ Error: {str(e)}")
@@ -1958,6 +2033,50 @@ async def available_models():
 async def get_cache_stats():
     """Get cache statistics for monitoring"""
     return cache_system.get_cache_stats()
+
+# LangFuse observability endpoint
+@app.get("/api/observability")
+async def get_observability_status():
+    """Get observability status and LangFuse info for Multi-Step RAG"""
+    if LANGFUSE_ENABLED:
+        return {
+            "status": "enabled",
+            "provider": "LangFuse",
+            "api_type": "Enhanced Multi-Step RAG",
+            "dashboard_url": "https://cloud.langfuse.com",
+            "features": [
+                "Cost tracking per request",
+                "Token usage monitoring", 
+                "Document retrieval metrics",
+                "Multi-step RAG session tracking",
+                "Parallel execution analytics",
+                "Cache performance metrics"
+            ],
+            "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
+            "metrics_tracked": {
+                "cost_per_request": "USD cost for LLM calls",
+                "token_usage": "Input/output tokens for each request",
+                "document_retrieval": "Number of documents retrieved",
+                "response_time": "End-to-end processing time",
+                "embedding_model": "Which embedding model used",
+                "execution_mode": "Parallel vs Standard execution",
+                "processing_steps": "Multi-step RAG tool usage"
+            }
+        }
+    else:
+        return {
+            "status": "disabled",
+            "message": "LangFuse observability not configured",
+            "api_type": "Enhanced Multi-Step RAG",
+            "setup_instructions": [
+                "1. Get free account at https://cloud.langfuse.com",
+                "2. Create new project and get API keys",
+                "3. Set environment variables:",
+                "   - LANGFUSE_PUBLIC_KEY=pk-...",
+                "   - LANGFUSE_SECRET_KEY=sk-...", 
+                "4. Restart application"
+            ]
+        }
 
 
 @app.delete("/api/cache/clear", dependencies=[Depends(verify_api_key)])
@@ -2031,7 +2150,7 @@ async def test_parallel_execution(request: MultiStepRAGRequest):
 
 
 async def standard_execution(
-    request: MultiStepRAGRequest, start_time: float = None
+    request: MultiStepRAGRequest, start_time: float = None, langfuse_trace = None
 ) -> MultiStepRAGResponse:
     """
     Standard execution mode without parallel processing
@@ -2128,6 +2247,45 @@ async def standard_execution(
         referenced_documents = unique_docs
         print(
             f"[API] Final document count after deduplication: {len(referenced_documents)}"
+        )
+
+        # Track document retrieval for standard execution
+        track_document_retrieval(
+            trace=langfuse_trace,
+            query=request.query,
+            model=request.embedding_model,
+            num_docs=len(referenced_documents),
+            docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
+        )
+        
+        # Track LLM call for standard execution
+        estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
+        estimated_output_tokens = len(answer.split()) * 1.3
+        
+        track_llm_call(
+            trace=langfuse_trace,
+            model="gpt-4.1-mini",
+            messages=[{"role": "user", "content": request.query}],
+            response=answer,
+            usage={
+                "prompt_tokens": int(estimated_input_tokens),
+                "completion_tokens": int(estimated_output_tokens),
+                "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+            }
+        )
+        
+        # Finalize LangFuse tracking for standard execution
+        estimated_cost = CostTracker.calculate_cost(
+            "gpt-4.1-mini", 
+            int(estimated_input_tokens), 
+            int(estimated_output_tokens)
+        )
+        
+        finalize_rag_session(
+            trace=langfuse_trace,
+            final_answer=answer,
+            processing_time_ms=processing_time_ms,
+            estimated_cost=estimated_cost
         )
 
         response_data = {

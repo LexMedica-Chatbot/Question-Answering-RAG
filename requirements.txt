@@ -29,4 +29,7 @@ redis==5.2.1
 
 # === ENVIRONMENT ===
 python-dotenv==1.0.1
-pydantic==2.10.5 
+pydantic==2.10.5
+
+# LLM Observability (Simple & Focused)
+langfuse==2.60.1 
