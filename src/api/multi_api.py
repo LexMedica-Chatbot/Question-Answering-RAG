@@ -19,9 +19,7 @@ from typing import List, Dict, Any, Optional, Literal, Union
 import secrets
 from starlette.status import HTTP_403_FORBIDDEN
 
-# Caching
-import redis
-from sklearn.metrics.pairwise import cosine_similarity
+# Note: Caching imports moved to src/cache/smart_cache.py
 
 # Langchain imports
 from langchain_openai import ChatOpenAI
@@ -40,365 +38,34 @@ from supabase.client import Client, create_client
 # Load environment variables
 load_dotenv()
 
-# LangFuse Observability (Simple & Focused on RAG)
+# Modern RAG Observability & Caching
 try:
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    from observability.langfuse_config import (
-        track_rag_session, track_document_retrieval, 
-        track_llm_call, finalize_rag_session, CostTracker, langfuse_tracker
+    from observability.rag_tracker import (
+        rag_tracker, APIType, ExecutionMode
     )
-    LANGFUSE_ENABLED = langfuse_tracker.enabled
-    print(f"✅ LangFuse observability (Multi-Step): {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
+    from cache.smart_cache import get_cached_response, cache_response
+    
+    LANGFUSE_ENABLED = rag_tracker.enabled
+    print(f"✅ RAG Tracker (Multi-Step): {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
+    print(f"✅ Smart Cache: enabled")
 except ImportError as e:
-    print(f"⚠️  LangFuse not available: {e}")
+    print(f"⚠️  RAG Observability not available: {e}")
     LANGFUSE_ENABLED = False
     
     # Create dummy functions
-    def track_rag_session(*args, **kwargs):
+    def get_cached_response(*args, **kwargs):
         return None
     
-    def track_document_retrieval(*args, **kwargs):
-        return None
-    
-    def track_llm_call(*args, **kwargs):
-        return None
-    
-    def finalize_rag_session(*args, **kwargs):
+    def cache_response(*args, **kwargs):
         pass
-    
-    class CostTracker:
-        @classmethod
-        def calculate_cost(cls, *args, **kwargs):
-            return 0.0
 
-# ======================= SMART CACHING SYSTEM =======================
+# ======================= LEGACY CACHE SYSTEM (Removed) =======================
+# Cache implementation moved to src/cache/smart_cache.py for modularity
 
-
-class SmartRAGCache:
-    """Multi-level caching system untuk RAG responses"""
-
-    def __init__(self):
-        # Redis connection dengan fallback
-        redis_url = os.getenv("REDIS_URL")  # Prioritaskan os.getenv
-        if not redis_url:
-            # Fallback ke os.environ jika getenv gagal
-            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
-
-        # Debug logging untuk troubleshooting
-        print(f"[CACHE] 🔍 Attempting Redis connection...")
-        print(f"[CACHE] 🔍 Redis URL available: {'Yes' if redis_url else 'No'}")
-
-        try:
-            if not redis_url:
-                raise Exception("REDIS_URL environment variable not found")
-
-            self.redis_client = redis.from_url(
-                redis_url, socket_connect_timeout=10, socket_timeout=10
-            )
-            # Test connection
-            self.redis_client.ping()
-            self.cache_enabled = True
-            # Mask password in log for security
-            display_url = redis_url
-            if "@" in display_url:
-                # Replace password with *** for security
-                parts = display_url.split("@")
-                if ":" in parts[0]:
-                    user_pass = parts[0].split(":")
-                    if len(user_pass) >= 3:  # redis://default:password format
-                        display_url = f"{user_pass[0]}:{user_pass[1]}:***@{parts[1]}"
-            print(f"[CACHE] ✅ Connected to Redis Cloud: {display_url}")
-        except Exception as e:
-            print(f"[CACHE] ❌ Redis connection failed: {e}")
-            print(f"[CACHE] 🔍 REDIS_URL present: {'Yes' if redis_url else 'No'}")
-            print("[CACHE] 🔄 Running without cache")
-            self.cache_enabled = False
-            self.redis_client = None
-
-        # Cache settings
-        self.similarity_threshold = 0.85
-        self.exact_ttl = 3600  # 1 hour
-        self.semantic_ttl = 3600  # 1 hour
-        self.document_ttl = 7200  # 2 hours
-
-        # In-memory fallback untuk embeddings
-        self.embedding_cache = {}
-
-    async def get_cached_response(
-        self, query: str, embedding_model: str
-    ) -> Optional[Dict]:
-        """Multi-level cache lookup"""
-        if not self.cache_enabled:
-            return None
-
-        try:
-            # 🎯 LEVEL 1: Exact Query Cache (fastest)
-            exact_result = await self._get_exact_cache(query, embedding_model)
-            if exact_result:
-                print(f"[CACHE] ✅ Level 1 HIT - Exact match")
-                return exact_result
-
-            # 🧠 LEVEL 2: Semantic Similarity Cache
-            semantic_result = await self._get_semantic_cache(query, embedding_model)
-            if semantic_result:
-                print(f"[CACHE] ✅ Level 2 HIT - Semantic match")
-                return semantic_result
-            # 📚 LEVEL 3: Document-based Cache - REMOVED for simplicity
-
-            print(f"[CACHE] ❌ MISS - Full pipeline needed")
-            return None
-
-        except Exception as e:
-            print(f"[CACHE] ⚠️ Cache lookup error: {e}")
-            return None
-
-    async def _get_exact_cache(self, query: str, model: str) -> Optional[Dict]:
-        """Level 1: Exact query matching"""
-        cache_key = f"exact:{self._get_query_hash(query, model)}"
-        cached = self.redis_client.get(cache_key)
-        if cached:
-            return json.loads(cached)
-        return None
-
-    async def _get_semantic_cache(self, query: str, model: str) -> Optional[Dict]:
-        """Level 2: Semantic similarity matching"""
-        try:
-            # Generate embedding untuk query
-            query_embedding = await self._get_query_embedding(query, model)
-            if query_embedding is None:
-                return None
-
-            # Cari cached queries dengan embedding serupa
-            cached_embeddings = self._get_cached_query_embeddings()
-
-            for cached_id, cached_embedding in cached_embeddings.items():
-                try:
-                    # Reshape untuk cosine similarity
-                    query_emb = np.array(query_embedding).reshape(1, -1)
-                    cached_emb = np.array(cached_embedding).reshape(1, -1)
-
-                    similarity = cosine_similarity(query_emb, cached_emb)[0][0]
-
-                    if similarity >= self.similarity_threshold:
-                        print(
-                            f"[CACHE] Found similar query (similarity: {similarity:.3f})"
-                        )
-                        cache_key = f"semantic:{cached_id}"
-                        cached = self.redis_client.get(cache_key)
-                        if cached:
-                            return json.loads(cached)
-
-                except Exception as e:
-                    print(f"[CACHE] Error comparing embeddings: {e}")
-                    continue
-
-        except Exception as e:
-            print(f"[CACHE] Semantic cache error: {e}")
-
-        return None
-
-    async def _get_document_cache(self, query: str, model: str) -> Optional[Dict]:
-        """Level 3: Document fingerprint matching"""
-        try:
-            # Extract key terms dari query untuk prediksi dokumen
-            key_terms = self._extract_key_terms(query)
-            if not key_terms:
-                return None
-
-            doc_fingerprint = self._create_document_fingerprint(key_terms)
-            cache_key = f"docs:{doc_fingerprint}"
-            cached_docs = self.redis_client.get(cache_key)
-
-            if cached_docs:
-                docs = json.loads(cached_docs)
-                # Return cached documents dengan generated answer flag
-                return {
-                    "answer": f"Berdasarkan dokumen yang relevan dengan query Anda: {query}",
-                    "referenced_documents": docs,
-                    "cache_level": "document",
-                    "model_info": {"model": model, "cached": True},
-                }
-
-        except Exception as e:
-            print(f"[CACHE] Document cache error: {e}")
-
-        return None
-
-    async def cache_response(self, query: str, model: str, response: Dict):
-        """Cache response di multiple levels"""
-        if not self.cache_enabled:
-            return
-
-        try:
-            # Gunakan encoder aman untuk semua tipe data
-            safe = jsonable_encoder(
-                response, custom_encoder={StepInfo: lambda x: x.dict()}
-            )
-            # Level 1: Exact cache
-            exact_key = f"exact:{self._get_query_hash(query, model)}"
-            self.redis_client.setex(exact_key, self.exact_ttl, json.dumps(safe))
-
-            # Level 2: Semantic cache
-            query_embedding = await self._get_query_embedding(query, model)
-            if query_embedding is not None:
-                semantic_id = hashlib.md5(str(query_embedding).encode()).hexdigest()[
-                    :16
-                ]
-                embedding_key = f"embedding:{semantic_id}"
-                self.redis_client.setex(
-                    embedding_key,
-                    self.semantic_ttl,
-                    json.dumps(
-                        query_embedding.tolist()
-                        if hasattr(query_embedding, "tolist")
-                        else query_embedding
-                    ),
-                )
-                semantic_key = f"semantic:{semantic_id}"
-                self.redis_client.setex(
-                    semantic_key, self.semantic_ttl, json.dumps(safe)
-                )
-
-            # Level 3: Document cache - REMOVED for simplicity
-
-            print(f"[CACHE] ✅ Response cached successfully")
-
-        except Exception as e:
-            print(f"[CACHE] ⚠️ Cache storage error: {e}")
-
-    def _get_query_hash(self, query: str, model: str) -> str:
-        """Generate hash untuk exact query matching"""
-        return hashlib.md5(f"{query.lower().strip()}_{model}".encode()).hexdigest()
-
-    async def _get_query_embedding(
-        self, query: str, model: str
-    ) -> Optional[List[float]]:
-        """Generate embedding untuk query dengan caching"""
-        cache_key = f"emb:{self._get_query_hash(query, model)}"
-
-        # Check in-memory cache dulu
-        if cache_key in self.embedding_cache:
-            return self.embedding_cache[cache_key]
-
-        try:
-            # Generate embedding menggunakan existing function
-            embeddings = get_embeddings(model)
-            query_embedding = embeddings.embed_query(query)
-
-            # Cache in memory untuk request berikutnya
-            self.embedding_cache[cache_key] = query_embedding
-
-            # Limit in-memory cache size
-            if len(self.embedding_cache) > 100:
-                # Remove oldest entries
-                oldest_keys = list(self.embedding_cache.keys())[:20]
-                for key in oldest_keys:
-                    del self.embedding_cache[key]
-
-            return query_embedding
-
-        except Exception as e:
-            print(f"[CACHE] Embedding generation error: {e}")
-            return None
-
-    def _get_cached_query_embeddings(self) -> Dict[str, List[float]]:
-        """Ambil semua cached embeddings untuk similarity search"""
-        embeddings = {}
-        try:
-            # Get all embedding keys
-            embedding_keys = self.redis_client.keys("embedding:*")
-            for key in embedding_keys[:50]:  # Limit untuk performa
-                try:
-                    cached_data = self.redis_client.get(key)
-                    if cached_data:
-                        embedding = json.loads(cached_data)
-                        embedding_id = key.decode().split(":")[-1]
-                        embeddings[embedding_id] = embedding
-                except Exception as e:
-                    print(f"[CACHE] Error loading embedding {key}: {e}")
-                    continue
-        except Exception as e:
-            print(f"[CACHE] Error getting cached embeddings: {e}")
-
-        return embeddings
-
-    def _extract_key_terms(self, query: str) -> List[str]:
-        """Extract key legal terms untuk document fingerprinting"""
-        legal_terms = []
-        query_lower = query.lower()
-
-        # Pattern untuk jenis peraturan
-        peraturan_patterns = [
-            r"(uu|undang-undang)\s*no\.?\s*(\d+)",
-            r"(pp|peraturan pemerintah)\s*no\.?\s*(\d+)",
-            r"(permenkes|peraturan menteri kesehatan)\s*no\.?\s*(\d+)",
-            r"(kepmenkes|keputusan menteri kesehatan)\s*no\.?\s*(\d+)",
-            r"pasal\s*(\d+)",
-        ]
-
-        for pattern in peraturan_patterns:
-            matches = re.findall(pattern, query_lower)
-            for match in matches:
-                if isinstance(match, tuple):
-                    legal_terms.append(f"{match[0]}_{match[1]}")
-                else:
-                    legal_terms.append(match)
-
-        # Key terms umum bidang kesehatan
-        key_words = [
-            "kesehatan",
-            "medis",
-            "rumah sakit",
-            "dokter",
-            "pasien",
-            "obat",
-            "informed consent",
-            "rekam medis",
-            "fasilitas kesehatan",
-            "tenaga kesehatan",
-            "pelayanan kesehatan",
-            "kode etik",
-            "standar profesi",
-            "komite medik",
-        ]
-
-        for word in key_words:
-            if word in query_lower:
-                legal_terms.append(word.replace(" ", "_"))
-
-        return list(set(legal_terms))  # Remove duplicates
-
-    def _create_document_fingerprint(self, key_terms: List[str]) -> str:
-        """Create fingerprint dari key terms"""
-        if not key_terms:
-            return "empty"
-        sorted_terms = sorted(set(key_terms))
-        return hashlib.md5("_".join(sorted_terms).encode()).hexdigest()[:16]
-
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics"""
-        if not self.cache_enabled:
-            return {"enabled": False}
-
-        try:
-            info = self.redis_client.info()
-            return {
-                "enabled": True,
-                "connected_clients": info.get("connected_clients", 0),
-                "used_memory_human": info.get("used_memory_human", "0B"),
-                "total_keys": len(self.redis_client.keys("*")),
-                "exact_cache_keys": len(self.redis_client.keys("exact:*")),
-                "semantic_cache_keys": len(self.redis_client.keys("semantic:*")),
-                "document_cache_keys": 0,  # Removed Level 3 cache
-                "embedding_cache_keys": len(self.redis_client.keys("embedding:*")),
-            }
-        except Exception as e:
-            return {"enabled": True, "error": str(e)}
-
-
-# Initialize cache system
-cache_system = SmartRAGCache()
+# Import modular cache system instead
+from cache.smart_cache import cache_system
 
 
 # ======================= PARALLEL TOOL EXECUTION =======================
@@ -542,12 +209,8 @@ async def parallel_tool_orchestration(
         print(f"[PARALLEL] 📚 History context added: {len(history_context)} chars")
 
     try:
-        # Check cache first (optional for parallel mode since main endpoint handles it)
-        # Note: Cache menggunakan query asli, bukan yang sudah ditambah history context
-        cached_response = await cache_system.get_cached_response(query, embedding_model)
-        if cached_response:
-            print(f"[PARALLEL] ✅ Cache HIT in parallel mode")
-            return cached_response
+        # NOTE: Cache check removed from here since main endpoint already handles it
+        # This function should only be called when cache miss occurs
 
         # Phase 1: Enhanced search - call directly without tool decorator to avoid callback issues
         print(f"[PARALLEL] 🔍 Starting enhanced search for: {query}")
@@ -662,24 +325,8 @@ async def parallel_tool_orchestration(
         return {"error": str(e)}
 
 
-def safe_parse(payload: str) -> Dict[str, Any]:
-    """
-    Parse string payload dengan fallback ke ast.literal_eval() jika json.loads() gagal.
-
-    Args:
-        payload: String yang akan di-parse (bisa JSON atau repr(dict))
-
-    Returns:
-        Dictionary hasil parsing atau dict kosong jika gagal
-    """
-    try:
-        return json.loads(payload)  # ① coba JSON murni
-    except json.JSONDecodeError:
-        try:
-            return ast.literal_eval(payload)  # ② coba repr(dict)
-        except Exception as e:
-            print(f"[WARNING] Parse failed: {e}")
-            return {}  # ③ terakhir, kosong
+# Import safe_parse from cache module
+from cache.smart_cache import safe_parse
 
 
 # Security settings
@@ -1817,50 +1464,90 @@ class MultiStepRAGResponse(BaseModel):
 )
 async def multi_step_rag_chat(request: MultiStepRAGRequest):
     start_time = time.time()
-    print(f"\n[API] 📝 New request: {request.query}")
+    print(f"\n[API] 📝 Enhanced Multi-Step RAG Request: {request.query}")
     print(f"[API] 🔍 Debug - use_parallel_execution: {request.use_parallel_execution}")
     
-    # Start LangFuse session tracking for Multi-Step RAG
-    langfuse_trace = track_rag_session(request.query, request.embedding_model)
-    print(f"[API] 📊 LangFuse tracking: {'enabled' if langfuse_trace else 'disabled'}")
+    # Check cache first with direct cache system access
+    try:
+        cached_result = await cache_system.get_cached_response(
+            query=request.query, 
+            embedding_model=request.embedding_model
+        )
+    except Exception as cache_error:
+        print(f"[API] ⚠️ Cache lookup error: {cache_error}")
+        cached_result = None
+    
+    if cached_result:
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        
+        # Extract answer and referenced_documents from cache result
+        if isinstance(cached_result, dict):
+            answer = cached_result.get("answer", "")
+            referenced_docs = cached_result.get("referenced_documents", [])
+            model_info = cached_result.get("model_info", {})
+        else:
+            answer = str(cached_result)
+            referenced_docs = []
+            model_info = {}
+        
+        print(f"🎯 Cache HIT - returning cached response ({processing_time_ms}ms)")
+        print(f"🎯 Cache data contains {len(referenced_docs)} referenced documents")
+        
+        # Start tracking for cached response
+        if LANGFUSE_ENABLED:
+            trace = rag_tracker.start_session(
+                query=request.query,
+                api_type=APIType.MULTI_STEP,
+                execution_mode=ExecutionMode.CACHED,
+                metadata={"embedding_model": request.embedding_model}
+            )
+            
+            rag_tracker.finalize_session(
+                trace=trace,
+                final_answer=answer,
+                api_type=APIType.MULTI_STEP,
+                execution_mode=ExecutionMode.CACHED,
+                processing_time_ms=processing_time_ms,
+                estimated_cost=0.0,  # No cost for cached responses
+                additional_metadata={"cache_hit": True, "cache_type": "redis_exact", "cached_docs_count": len(referenced_docs)}
+            )
+        
+        return MultiStepRAGResponse(
+            answer=answer,
+            referenced_documents=referenced_docs,
+            processing_steps=[
+                StepInfo(
+                    tool="cache_lookup",
+                    tool_input={"query": request.query},
+                    tool_output=f"Cache hit - response retrieved from cache with {len(referenced_docs)} referenced documents"
+                )
+            ],
+            processing_time_ms=processing_time_ms,
+            model_info={
+                "cached": True, 
+                "cache_type": "redis_exact", 
+                "embedding_model": request.embedding_model,
+                "original_model_info": model_info
+            }
+        )
+    
+    # Determine execution mode for tracking
+    execution_mode = ExecutionMode.PARALLEL if request.use_parallel_execution else ExecutionMode.STANDARD
+    
+    # Start RAG tracking session for Multi-Step API
+    trace = None
+    if LANGFUSE_ENABLED:
+        trace = rag_tracker.start_session(
+            query=request.query,
+            api_type=APIType.MULTI_STEP,
+            execution_mode=execution_mode,
+            metadata={"embedding_model": request.embedding_model}
+        )
+    
+    print(f"[API] 📊 RAG Tracker: {'enabled' if trace else 'disabled'}")
 
     try:
-        # 🚀 STEP 1: Check cache first
-        cache_key_model = request.embedding_model
-        cached_response = await cache_system.get_cached_response(
-            request.query, cache_key_model
-        )
-
-        if cached_response:
-            print(f"[API] ✅ Cache HIT - Returning cached response")
-            end_time = time.time()
-            processing_time_ms = int((end_time - start_time) * 1000)
-
-            # Restore processing_steps from cache
-            cached_steps = cached_response.get("processing_steps", [])
-            processing_steps = []
-            
-            # Convert cached step dicts back to StepInfo objects
-            for step in cached_steps:
-                if isinstance(step, dict):
-                    processing_steps.append(StepInfo(**step))
-                elif hasattr(step, 'tool'):  # Already a StepInfo object
-                    processing_steps.append(step)
-            
-            return MultiStepRAGResponse(
-                answer=cached_response.get("answer", ""),
-                referenced_documents=cached_response.get("referenced_documents", []),
-                processing_steps=processing_steps,
-                processing_time_ms=processing_time_ms,
-                model_info={
-                    "model": request.embedding_model,
-                    "cached": True,
-                    "cache_level": cached_response.get("cache_level", "unknown"),
-                    "parallel_execution": cached_response.get("model_info", {}).get(
-                        "parallel_execution", False
-                    ),
-                },
-            )
+        # Note: Cache check moved to beginning of function
 
         # 🚀 STEP 2: Check if parallel execution is requested
         print(
@@ -1930,48 +1617,66 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                     }
 
                     # Track document retrieval for parallel execution
-                    track_document_retrieval(
-                        trace=langfuse_trace,
-                        query=request.query,
-                        model=request.embedding_model,
-                        num_docs=len(referenced_documents),
-                        docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
-                    )
-                    
-                    # Track LLM call for parallel execution
-                    estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
-                    estimated_output_tokens = len(answer.split()) * 1.3
-                    
-                    track_llm_call(
-                        trace=langfuse_trace,
-                        model="gpt-4.1-mini",
-                        messages=[{"role": "user", "content": request.query}],
-                        response=answer,
-                        usage={
-                            "prompt_tokens": int(estimated_input_tokens),
-                            "completion_tokens": int(estimated_output_tokens),
-                            "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
-                        }
-                    )
-                    
-                    # Finalize LangFuse tracking for parallel execution
-                    estimated_cost = CostTracker.calculate_cost(
-                        "gpt-4.1-mini", 
-                        int(estimated_input_tokens), 
-                        int(estimated_output_tokens)
-                    )
-                    
-                    finalize_rag_session(
-                        trace=langfuse_trace,
-                        final_answer=answer,
-                        processing_time_ms=processing_time_ms,
-                        estimated_cost=estimated_cost
-                    )
+                    if LANGFUSE_ENABLED and trace:
+                        rag_tracker.track_document_retrieval(
+                            trace=trace,
+                            query=request.query,
+                            embedding_model=request.embedding_model,
+                            num_docs=len(referenced_documents),
+                            api_type=APIType.MULTI_STEP,
+                            docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
+                        )
+                        
+                        # Track LLM call for parallel execution
+                        estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
+                        estimated_output_tokens = len(answer.split()) * 1.3
+                        
+                        rag_tracker.track_llm_generation(
+                            trace=trace,
+                            model="gpt-4.1-mini",
+                            input_messages=[{"role": "user", "content": request.query}],
+                            response=answer,
+                            api_type=APIType.MULTI_STEP,
+                            usage={
+                                "prompt_tokens": int(estimated_input_tokens),
+                                "completion_tokens": int(estimated_output_tokens),
+                                "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                            }
+                        )
+                        
+                        # Finalize RAG tracking for parallel execution
+                        estimated_cost = rag_tracker._calculate_cost(
+                            "gpt-4.1-mini", 
+                            {
+                                "prompt_tokens": int(estimated_input_tokens),
+                                "completion_tokens": int(estimated_output_tokens),
+                                "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                            }
+                        )
+                        
+                        rag_tracker.finalize_session(
+                            trace=trace,
+                            final_answer=answer,
+                            api_type=APIType.MULTI_STEP,
+                            execution_mode=ExecutionMode.PARALLEL,
+                            processing_time_ms=processing_time_ms,
+                            estimated_cost=estimated_cost
+                        )
 
-                    # Cache the response
+                    # Cache the response with direct cache system
                     try:
+                        cache_data = {
+                            "answer": answer,
+                            "referenced_documents": referenced_documents,
+                            "model_info": {
+                                "parallel_execution": True,
+                                "embedding_model": request.embedding_model
+                            }
+                        }
                         await cache_system.cache_response(
-                            request.query, request.embedding_model, response_data
+                            query=request.query,
+                            model=request.embedding_model,
+                            response=cache_data
                         )
                         print(f"[API] ✅ Response cached successfully")
                     except Exception as cache_error:
@@ -1987,18 +1692,18 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                     )
                     # Fallback to standard execution
                     print(f"[API] 🔍 Debug - Falling back to standard execution")
-                    return await standard_execution(request, start_time, langfuse_trace)
+                    return await standard_execution(request, start_time, trace)
             except Exception as e:
                 print(
                     f"[API] ⚠️ Parallel execution error: {str(e)}, falling back to standard mode"
                 )
                 print(f"[API] 🔍 Debug - Exception in parallel mode, falling back")
-                return await standard_execution(request, start_time, langfuse_trace)
+                return await standard_execution(request, start_time, trace)
         else:
             print(
                 f"[API] 🔍 Debug - use_parallel_execution is False, using standard mode"
             )
-            return await standard_execution(request, start_time, langfuse_trace)
+            return await standard_execution(request, start_time, trace)
 
     except Exception as e:
         print(f"[API] ❌ Error: {str(e)}")
@@ -2014,6 +1719,34 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "system": "Enhanced Multi-Step RAG"}
+
+@app.get("/monitoring/health")
+async def monitoring_health():
+    """Basic health check endpoint for monitoring"""
+    return {"status": "healthy", "timestamp": time.time()}
+
+@app.get("/monitoring/health/detailed")
+async def monitoring_health_detailed():
+    """Detailed health check endpoint for external monitoring systems"""
+    from cache.smart_cache import get_cache_stats
+    
+    try:
+        cache_status = get_cache_stats("multi")
+        cache_healthy = cache_status.get("enabled", False)
+    except:
+        cache_healthy = False
+    
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "services": {
+            "api": "operational",
+            "cache": "operational" if cache_healthy else "degraded",
+            "database": "operational"  # Assuming Pinecone is working if API works
+        },
+        "system": "Enhanced Multi-Step RAG",
+        "uptime": time.time()  # Simple uptime indicator
+    }
 
 
 @app.get("/api/models", dependencies=[Depends(verify_api_key)])
@@ -2032,26 +1765,31 @@ async def available_models():
 @app.get("/api/cache/stats", dependencies=[Depends(verify_api_key)])
 async def get_cache_stats():
     """Get cache statistics for monitoring"""
-    return cache_system.get_cache_stats()
+    from cache.smart_cache import get_cache_stats
+    return get_cache_stats("multi")
 
 # LangFuse observability endpoint
 @app.get("/api/observability")
 async def get_observability_status():
-    """Get observability status and LangFuse info for Multi-Step RAG"""
+    """Get RAG observability and cache status for Multi-Step RAG"""
+    from cache.smart_cache import get_cache_stats
+    
+    response = {
+        "tracking": rag_tracker.get_status() if LANGFUSE_ENABLED else {"enabled": False},
+        "cache": get_cache_stats("multi"),
+        "api_type": "enhanced_multi_step_rag",
+        "features": [
+            "Smart caching with similarity matching",
+            "Cost tracking per request",
+            "Performance monitoring",
+            "Multi-step process tracking",
+            "Parallel vs Standard execution analytics",
+            "Agent-based tool orchestration tracking"
+        ]
+    }
+    
     if LANGFUSE_ENABLED:
-        return {
-            "status": "enabled",
-            "provider": "LangFuse",
-            "api_type": "Enhanced Multi-Step RAG",
-            "dashboard_url": "https://cloud.langfuse.com",
-            "features": [
-                "Cost tracking per request",
-                "Token usage monitoring", 
-                "Document retrieval metrics",
-                "Multi-step RAG session tracking",
-                "Parallel execution analytics",
-                "Cache performance metrics"
-            ],
+        response["tracking"].update({
             "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
             "metrics_tracked": {
                 "cost_per_request": "USD cost for LLM calls",
@@ -2060,39 +1798,32 @@ async def get_observability_status():
                 "response_time": "End-to-end processing time",
                 "embedding_model": "Which embedding model used",
                 "execution_mode": "Parallel vs Standard execution",
-                "processing_steps": "Multi-step RAG tool usage"
+                "processing_steps": "Multi-step RAG tool usage",
+                "agent_actions": "Tool calls and reasoning steps"
             }
-        }
+        })
     else:
-        return {
-            "status": "disabled",
-            "message": "LangFuse observability not configured",
-            "api_type": "Enhanced Multi-Step RAG",
-            "setup_instructions": [
-                "1. Get free account at https://cloud.langfuse.com",
-                "2. Create new project and get API keys",
-                "3. Set environment variables:",
-                "   - LANGFUSE_PUBLIC_KEY=pk-...",
-                "   - LANGFUSE_SECRET_KEY=sk-...", 
-                "4. Restart application"
-            ]
-        }
+        response["setup_instructions"] = [
+            "1. Get free account at https://cloud.langfuse.com",
+            "2. Create new project and get API keys",
+            "3. Set environment variables:",
+            "   - LANGFUSE_PUBLIC_KEY=pk-...",
+            "   - LANGFUSE_SECRET_KEY=sk-...", 
+            "4. Restart application"
+        ]
+    
+    return response
 
 
 @app.delete("/api/cache/clear", dependencies=[Depends(verify_api_key)])
 async def clear_cache():
     """Clear all cache (use with caution)"""
-    if cache_system.cache_enabled:
-        try:
-            # Clear all cache keys
-            cache_system.redis_client.flushdb()
-            # Clear in-memory embedding cache
-            cache_system.embedding_cache.clear()
-            return {"status": "success", "message": "Cache cleared successfully"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to clear cache: {str(e)}"}
-    else:
-        return {"status": "disabled", "message": "Cache is not enabled"}
+    try:
+        from cache.smart_cache import clear_cache
+        clear_cache("multi")
+        return {"status": "success", "message": "Multi-step RAG cache cleared successfully"}
+    except Exception as e:
+        return {"status": "error", "message": f"Failed to clear cache: {str(e)}"}
 
 
 @app.post("/api/chat/parallel", dependencies=[Depends(verify_api_key)])
@@ -2150,7 +1881,7 @@ async def test_parallel_execution(request: MultiStepRAGRequest):
 
 
 async def standard_execution(
-    request: MultiStepRAGRequest, start_time: float = None, langfuse_trace = None
+    request: MultiStepRAGRequest, start_time: float = None, trace = None
 ) -> MultiStepRAGResponse:
     """
     Standard execution mode without parallel processing
@@ -2250,43 +1981,58 @@ async def standard_execution(
         )
 
         # Track document retrieval for standard execution
-        track_document_retrieval(
-            trace=langfuse_trace,
-            query=request.query,
-            model=request.embedding_model,
-            num_docs=len(referenced_documents),
-            docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
-        )
-        
-        # Track LLM call for standard execution
-        estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
-        estimated_output_tokens = len(answer.split()) * 1.3
-        
-        track_llm_call(
-            trace=langfuse_trace,
-            model="gpt-4.1-mini",
-            messages=[{"role": "user", "content": request.query}],
-            response=answer,
-            usage={
-                "prompt_tokens": int(estimated_input_tokens),
-                "completion_tokens": int(estimated_output_tokens),
-                "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
-            }
-        )
-        
-        # Finalize LangFuse tracking for standard execution
-        estimated_cost = CostTracker.calculate_cost(
-            "gpt-4.1-mini", 
-            int(estimated_input_tokens), 
-            int(estimated_output_tokens)
-        )
-        
-        finalize_rag_session(
-            trace=langfuse_trace,
-            final_answer=answer,
-            processing_time_ms=processing_time_ms,
-            estimated_cost=estimated_cost
-        )
+        if LANGFUSE_ENABLED and trace:
+            rag_tracker.track_document_retrieval(
+                trace=trace,
+                query=request.query,
+                embedding_model=request.embedding_model,
+                num_docs=len(referenced_documents),
+                api_type=APIType.MULTI_STEP,
+                docs=[doc.get("content", "")[:200] + "..." if len(doc.get("content", "")) > 200 else doc.get("content", "") for doc in referenced_documents[:2]]
+            )
+            
+            # Track processing steps for multi-step RAG
+            rag_tracker.track_processing_steps(
+                trace=trace,
+                steps=[step.dict() for step in processing_steps],
+                api_type=APIType.MULTI_STEP
+            )
+            
+            # Track LLM call for standard execution
+            estimated_input_tokens = len(f"{request.query} {' '.join([doc.get('content', '')[:500] for doc in referenced_documents[:3]])}".split()) * 1.3
+            estimated_output_tokens = len(answer.split()) * 1.3
+            
+            rag_tracker.track_llm_generation(
+                trace=trace,
+                model="gpt-4.1-mini",
+                input_messages=[{"role": "user", "content": request.query}],
+                response=answer,
+                api_type=APIType.MULTI_STEP,
+                usage={
+                    "prompt_tokens": int(estimated_input_tokens),
+                    "completion_tokens": int(estimated_output_tokens),
+                    "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                }
+            )
+            
+            # Finalize RAG tracking for standard execution
+            estimated_cost = rag_tracker._calculate_cost(
+                "gpt-4.1-mini", 
+                {
+                    "prompt_tokens": int(estimated_input_tokens),
+                    "completion_tokens": int(estimated_output_tokens),
+                    "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
+                }
+            )
+            
+            rag_tracker.finalize_session(
+                trace=trace,
+                final_answer=answer,
+                api_type=APIType.MULTI_STEP,
+                execution_mode=ExecutionMode.STANDARD,
+                processing_time_ms=processing_time_ms,
+                estimated_cost=estimated_cost
+            )
 
         response_data = {
             "answer": answer,
@@ -2300,10 +2046,20 @@ async def standard_execution(
             },
         }
 
-        # Cache the response
+        # Cache the response with direct cache system
         try:
+            cache_data = {
+                "answer": answer,
+                "referenced_documents": referenced_documents,
+                "model_info": {
+                    "parallel_execution": False,
+                    "embedding_model": request.embedding_model
+                }
+            }
             await cache_system.cache_response(
-                request.query, request.embedding_model, response_data
+                query=request.query,
+                model=request.embedding_model,
+                response=cache_data
             )
             print(f"[API] ✅ Response cached successfully")
         except Exception as cache_error:
