@@ -353,14 +353,114 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add error handling
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    print(f"❌ Unhandled exception: {str(exc)}")
+    return HTTPException(status_code=500, detail=f"Internal server error: {str(exc)}")
+
+# Global variables to be initialized on startup
+agent_executor = None
+
+# Add startup event
+@app.on_event("startup")
+async def startup_event():
+    global agent_executor
+    try:
+        print("🚀 Starting LexMedica Chatbot Multi-Agent RAG API...")
+        print(f"✅ FastAPI initialized successfully")
+        
+        # Test environment variables
+        required_env_vars = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY", "OPENAI_API_KEY"]
+        missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+        
+        if missing_vars:
+            print(f"⚠️ Missing environment variables: {missing_vars}")
+        else:
+            print("✅ All required environment variables found")
+            
+        # Test database connection
+        try:
+            # Simple test query
+            result = supabase.table("documents").select("*").limit(1).execute()
+            print("✅ Database connection successful")
+        except Exception as db_error:
+            print(f"⚠️ Database connection issue: {db_error}")
+        
+        # Initialize agent executor
+        try:
+            print("✅ Initializing RAG agent...")
+            
+            # Create tools list
+            tools = [
+                search_documents,
+                refine_query, 
+                evaluate_documents,
+                generate_answer,
+                request_new_query,
+            ]
+            
+            # Create system prompt for agent
+            system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
+
+Anda memiliki akses ke database dokumen peraturan kesehatan Indonesia dan akan mengikuti langkah-langkah berikut:
+
+1. SEARCH: Cari dokumen yang relevan dengan pertanyaan pengguna
+2. EVALUATE: Evaluasi apakah dokumen yang ditemukan cukup untuk menjawab pertanyaan
+3. REFINE (jika perlu): Perbaiki query pencarian jika dokumen tidak cukup relevan
+4. GENERATE: Hasilkan jawaban berdasarkan dokumen yang relevan
+
+INGAT: 
+1. Setelah penyempurnaan query, langsung hasilkan jawaban tanpa evaluasi kedua
+2. JANGAN melakukan penyempurnaan query lebih dari sekali  
+3. Lebih baik memberikan jawaban berdasarkan dokumen yang ada daripada terus melakukan evaluasi"""
+
+            # Create prompt template
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", system_prompt),
+                ("system", "{history_summary}"),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+            
+            # Create OpenAI tools agent
+            agent = create_openai_tools_agent(llm, tools, prompt)
+            
+            # Create agent executor
+            agent_executor = AgentExecutor(
+                agent=agent,
+                tools=tools,
+                verbose=False,
+                handle_parsing_errors=True,
+                return_intermediate_steps=True,
+                max_execution_time=120,
+                max_iterations=6,
+            )
+            
+            print("✅ RAG agent initialized successfully")
+        except Exception as agent_error:
+            print(f"⚠️ Agent initialization issue: {agent_error}")
+            agent_executor = None
+            
+        print("✅ Startup completed successfully")
+        
+    except Exception as e:
+        print(f"❌ Startup error: {str(e)}")
+        # Don't raise exception to allow graceful degradation
+
 # Add CORS middleware
-backend_url = os.environ.get("BACKEND_URL")
-frontend_url = os.environ.get("FRONTEND_URL")
+backend_url = os.environ.get("BACKEND_URL", "*")
+frontend_url = os.environ.get("FRONTEND_URL", "*")
+
+# More permissive CORS for Cloud Run
+allowed_origins = ["*"] if not backend_url or backend_url == "*" else [backend_url, frontend_url]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[backend_url, frontend_url],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["POST", "GET"],
+    allow_methods=["POST", "GET", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -1383,39 +1483,7 @@ INGAT:
 2. JANGAN melakukan penyempurnaan query lebih dari sekali
 3. Lebih baik memberikan jawaban berdasarkan dokumen yang ada daripada terus melakukan evaluasi"""
 
-# Create the multi-step RAG with tools
-tools = [
-    search_documents,
-    refine_query,
-    evaluate_documents,
-    generate_answer,
-    request_new_query,
-]
-
-prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", system_prompt),
-        ("system", "{history_summary}"),  # <── baru
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ]
-)
-
-# Buat multi-step RAG dengan parameter optimize= untuk performa
-agent = create_openai_tools_agent(llm, tools, prompt)
-
-# Create multi-step RAG executor with faster execution settings
-agent_executor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=False,  # Kurangi logging untuk kecepatan
-    handle_parsing_errors=True,
-    return_intermediate_steps=True,
-    max_execution_time=120,  # Naikkan batas waktu eksekusi maksimum (dalam detik)
-    max_iterations=6,  # Naikkan ke 6 untuk mengakomodasi semua langkah (search-eval-refine-search-answer)
-)
-
+# Agent executor akan diinisialisasi saat startup
 # Tambahkan variabel untuk melacak jumlah penyempurnaan
 refinement_count = 0
 
@@ -1718,7 +1786,18 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "system": "Enhanced Multi-Step RAG"}
+    return {"status": "healthy", "system": "Enhanced Multi-Step RAG", "timestamp": int(time.time())}
+
+@app.get("/")
+async def root():
+    """Root endpoint untuk Cloud Run health check"""
+    return {
+        "message": "LexMedica Chatbot Multi-Agent RAG API",
+        "status": "operational",
+        "version": "1.0.0",
+        "system": "Enhanced Multi-Step RAG",
+        "timestamp": int(time.time())
+    }
 
 @app.get("/monitoring/health")
 async def monitoring_health():
@@ -1890,6 +1969,17 @@ async def standard_execution(
         start_time = time.time()
 
     print(f"[API] 🔄 Using STANDARD EXECUTION mode")
+
+    # Check if agent_executor is initialized
+    if agent_executor is None:
+        print("[API] ❌ Agent executor not initialized")
+        return MultiStepRAGResponse(
+            answer="Maaf, sistem sedang dalam proses inisialisasi. Silakan coba lagi dalam beberapa saat.",
+            referenced_documents=[],
+            processing_steps=[],
+            processing_time_ms=int((time.time() - start_time) * 1000),
+            model_info={"error": "Agent not initialized"}
+        )
 
     try:
         # Reset refinement count for new request
@@ -2081,7 +2171,9 @@ async def standard_execution(
         )
 
 
-# Run the API server
+# For development only - tidak digunakan di production/cloud
 if __name__ == "__main__":
-    print(f"API Key: {API_KEY}")
-    uvicorn.run("multi_api:app", host="0.0.0.0", port=8000, reload=True)
+    import os
+    port = int(os.getenv("PORT", 8080))
+    print(f"Starting development server on port {port}")
+    uvicorn.run("src.api.multi_api:app", host="0.0.0.0", port=port, reload=False)
