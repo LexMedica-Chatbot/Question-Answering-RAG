@@ -1,0 +1,607 @@
+success,answer,response_time_ms,api_type,embedding_model,answer_length,answer_word_count,num_documents,processing_steps,model_info,question,category,difficulty,expected_keywords,keyword_score,structure_score,completeness_score,overall_quality
+True,"Berdasarkan PP No. 32 Tahun 1996 (berlaku) Pasal 1 ayat 1, definisi tenaga kesehatan adalah:
+
+""Setiap orang yang mengabdikan diri dalam bidang kesehatan serta memiliki pengetahuan dan/atau keterampilan melalui pendidikan di bidang kesehatan yang untuk jenis tertentu memerlukan kewenangan untuk melakukan upaya kesehatan.""
+
+Definisi ini merupakan acuan resmi yang berlaku saat ini mengenai tenaga kesehatan menurut peraturan pemerintah di Indonesia. 
+
+Perlu dicatat bahwa UU No. 36 Tahun 2009 yang sebelumnya mengatur tenaga kesehatan telah dicabut, sehingga definisi dan ketentuan terkait tenaga kesehatan merujuk pada PP No. 32 Tahun 1996 yang masih berlaku.",7061,simple,small,660,92,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Apa definisi tenaga kesehatan menurut undang-undang?,definisi,easy,"['tenaga kesehatan', 'setiap orang', 'pendidikan']",1.0,0.4,1.0,0.7999999999999999
+True,"Berdasarkan PP No. 32 Tahun 1996 (berlaku) Pasal 1 ayat (1), definisi tenaga kesehatan adalah:
+
+""Setiap orang yang mengabdikan diri dalam bidang kesehatan serta memiliki pengetahuan dan/atau keterampilan melalui pendidikan di bidang kesehatan yang untuk jenis tertentu memerlukan kewenangan untuk melakukan upaya kesehatan.""
+
+Definisi ini juga sejalan dengan yang tercantum dalam UU No. 36 Tahun 2009 (dicabut) Pasal 1 ayat (6), yang menyatakan bahwa tenaga kesehatan adalah setiap orang yang mengabdikan diri dalam bidang kesehatan serta memiliki pengetahuan dan/atau keterampilan melalui pendidikan di bidang kesehatan yang untuk jenis tertentu memerlukan kewenangan untuk melakukan upaya kesehatan.
+
+Namun, karena UU No. 36 Tahun 2009 sudah dicabut, definisi yang berlaku saat ini merujuk pada PP No. 32 Tahun 1996 yang masih berlaku.",6768,simple,large,837,119,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Apa definisi tenaga kesehatan menurut undang-undang?,definisi,easy,"['tenaga kesehatan', 'setiap orang', 'pendidikan']",1.0,0.4,1.0,0.7999999999999999
+True,Definisi tenaga kesehatan menurut undang-undang adalah setiap orang yang mengabdikan diri dalam bidang kesehatan serta memiliki pengetahuan dan/atau keterampilan melalui pendidikan di bidang kesehatan yang untuk jenis tertentu memerlukan kewenangan untuk melakukan upaya kesehatan (PP No. 32 Tahun 1996 Pasal 1).,21205,multi,small,312,41,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa definisi tenaga kesehatan menurut undang-undang?,definisi,easy,"['tenaga kesehatan', 'setiap orang', 'pendidikan']",1.0,0.2,0.812,0.6706666666666666
+True,Definisi tenaga kesehatan menurut undang-undang adalah setiap orang yang mengabdikan diri dalam bidang kesehatan serta memiliki pengetahuan dan/atau keterampilan melalui pendidikan di bidang kesehatan yang untuk jenis tertentu memerlukan kewenangan untuk melakukan upaya kesehatan (PP No. 32 Tahun 1996 Pasal 1).,22740,multi,large,312,41,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa definisi tenaga kesehatan menurut undang-undang?,definisi,easy,"['tenaga kesehatan', 'setiap orang', 'pendidikan']",1.0,0.2,0.812,0.6706666666666666
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 260 ayat (2) dan PP No. 28 Tahun 2024 Pasal 678 ayat (2) (kedua peraturan berstatus berlaku), STR (Surat Tanda Registrasi) bagi dokter dan tenaga medis lainnya diterbitkan oleh Konsil atas nama Menteri setelah memenuhi persyaratan yang ditentukan.
+
+Jadi, yang berwenang mengeluarkan STR dokter adalah **Konsil atas nama Menteri Kesehatan**.",4761,simple,small,379,57,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Siapa yang berwenang mengeluarkan STR dokter?,perizinan,easy,"['konsil kedokteran', 'STR', 'surat tanda registrasi']",0.6666666666666666,0.6,0.7123333333333333,0.6596666666666666
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 260 ayat (2) dan PP No. 28 Tahun 2024 Pasal 678 ayat (2) (kedua peraturan ini berstatus berlaku), STR (Surat Tanda Registrasi) bagi dokter dan tenaga medis lainnya diterbitkan oleh Konsil atas nama Menteri setelah memenuhi persyaratan yang ditentukan.
+
+Jadi, yang berwenang mengeluarkan STR dokter adalah **Konsil atas nama Menteri Kesehatan**.",6746,simple,large,383,58,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Siapa yang berwenang mengeluarkan STR dokter?,perizinan,easy,"['konsil kedokteran', 'STR', 'surat tanda registrasi']",0.6666666666666666,0.6,0.7163333333333333,0.6609999999999999
+True,"Berdasarkan dokumen yang tersedia, Surat Tanda Registrasi (STR) dokter diterbitkan oleh Konsil atas nama Menteri setelah Tenaga Medis memenuhi persyaratan tertentu, yaitu memiliki ijazah pendidikan di bidang kesehatan dan/atau sertifikat profesi serta sertifikat kompetensi. Proses pengajuan STR dilakukan secara elektronik melalui Sistem Informasi Kesehatan yang terintegrasi dengan Sistem Informasi Kesehatan Nasional (PP No. 28 Tahun 2024 Pasal 678).
+
+Ketentuan ini juga ditegaskan dalam Undang-Undang No. 17 Tahun 2023 Pasal 260 bahwa STR wajib dimiliki oleh setiap Tenaga Medis yang akan menjalankan praktik dan diterbitkan oleh Konsil atas nama Menteri setelah memenuhi persyaratan tersebut.
+
+Dengan demikian, yang berwenang mengeluarkan STR dokter adalah **Konsil atas nama Menteri**. 
+
+(Sumber: PP No. 28 Tahun 2024 Pasal 678; UU No. 17 Tahun 2023 Pasal 260)",37953,multi,small,866,120,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Siapa yang berwenang mengeluarkan STR dokter?,perizinan,easy,"['konsil kedokteran', 'STR', 'surat tanda registrasi']",0.6666666666666666,0.8,0.8333333333333333,0.7666666666666666
+True,"Berdasarkan dokumen yang tersedia, Surat Tanda Registrasi (STR) dokter diterbitkan oleh Konsil atas nama Menteri setelah Tenaga Medis memenuhi persyaratan yang ditentukan. Persyaratan tersebut paling sedikit meliputi memiliki ijazah pendidikan di bidang kesehatan dan/atau sertifikat profesi serta memiliki sertifikat kompetensi. Proses pengajuan permohonan STR dilakukan secara elektronik melalui Sistem Informasi Kesehatan yang terintegrasi dengan Sistem Informasi Kesehatan Nasional.
+
+Dengan demikian, yang berwenang mengeluarkan STR dokter adalah Konsil atas nama Menteri (PP No. 28 Tahun 2024 Pasal 678 dan UU No. 17 Tahun 2023 Pasal 260).",34737,multi,large,644,85,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Siapa yang berwenang mengeluarkan STR dokter?,perizinan,easy,"['konsil kedokteran', 'STR', 'surat tanda registrasi']",0.6666666666666666,0.4,0.8333333333333333,0.6333333333333333
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 264 (berlaku) dan PP No. 28 Tahun 2024 Pasal 771 (berlaku), dapat dijelaskan bahwa:
+
+- STR adalah singkatan dari **Surat Tanda Registrasi**. STR merupakan dokumen yang wajib dimiliki oleh Tenaga Medis dan Tenaga Kesehatan sebagai bukti registrasi resmi untuk dapat menjalankan praktik di bidang kesehatan.
+
+- SIP adalah singkatan dari **Surat Izin Praktik**. SIP adalah izin yang diberikan kepada Tenaga Medis dan Tenaga Kesehatan untuk melakukan praktik pelayanan kesehatan di tempat praktik tertentu.
+
+Jadi, STR adalah surat tanda registrasi yang menunjukkan legalitas tenaga kesehatan secara profesional, sedangkan SIP adalah surat izin yang mengatur tempat dan izin praktik tenaga kesehatan tersebut. Keduanya wajib dimiliki oleh Tenaga Medis dan Tenaga Kesehatan yang menyelenggarakan pelayanan kesehatan di fasilitas pelayanan kesehatan.",9933,simple,small,882,124,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Apa kepanjangan dari STR dan SIP?,akronim,easy,"['surat tanda registrasi', 'surat izin praktik']",1.0,0.8,1.0,0.9333333333333332
+True,"Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 771 dan Pasal 681, serta UU No. 17 Tahun 2023 (berlaku) Pasal 252, dapat dijelaskan bahwa:
+
+- STR adalah singkatan dari **Surat Tanda Registrasi**. STR merupakan dokumen yang wajib dimiliki oleh Tenaga Medis dan Tenaga Kesehatan sebagai bukti registrasi resmi untuk dapat melakukan praktik pelayanan kesehatan.
+
+- SIP adalah singkatan dari **Surat Izin Praktik**. SIP adalah dokumen izin yang wajib dimiliki oleh Tenaga Medis dan Tenaga Kesehatan tertentu untuk melakukan praktik keprofesiannya di fasilitas pelayanan kesehatan.
+
+Jadi, STR adalah surat tanda registrasi yang menunjukkan bahwa tenaga kesehatan telah terdaftar secara resmi, sedangkan SIP adalah surat izin praktik yang memberikan hak untuk melakukan praktik pelayanan kesehatan secara legal.",10196,simple,large,806,115,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Apa kepanjangan dari STR dan SIP?,akronim,easy,"['surat tanda registrasi', 'surat izin praktik']",1.0,0.8,1.0,0.9333333333333332
+True,Agent stopped due to max iterations.,32890,multi,small,36,6,14,8,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa kepanjangan dari STR dan SIP?,akronim,easy,"['surat tanda registrasi', 'surat izin praktik']",0.0,0.0,0.036,0.011999999999999999
+True,"Kepanjangan STR adalah **Surat Tanda Registrasi**. STR merupakan dokumen resmi yang wajib dimiliki oleh setiap Tenaga Medis dan Tenaga Kesehatan yang akan menjalankan praktik di Indonesia. STR diterbitkan oleh Konsil atas nama Menteri setelah memenuhi persyaratan seperti ijazah pendidikan di bidang kesehatan, sertifikat profesi, dan sertifikat kompetensi. STR berlaku seumur hidup bagi warga negara Indonesia dan juga wajib dimiliki oleh tenaga kesehatan asing selama menjalankan praktik atau mengikuti program pendidikan spesialis/subspesialis di Indonesia. Pengajuan STR dilakukan secara elektronik melalui Sistem Informasi Kesehatan sesuai ketentuan yang diatur dalam peraturan menteri terkait. Dengan demikian, STR adalah Surat Tanda Registrasi yang menjadi bukti legalitas tenaga kesehatan untuk melakukan praktik di Indonesia (PP No. 28 Tahun 2024 Pasal 677, 678; UU No. 17 Tahun 2023 Pasal 254, 260).
+
+Sedangkan SIP adalah singkatan dari **Surat Izin Praktik**. Surat ini wajib dimiliki oleh setiap Tenaga Medis dan Tenaga Kesehatan tertentu yang akan melakukan praktik keprofesiannya sebagai bukti legalitas dan izin resmi untuk menjalankan praktik tersebut. SIP diberikan bagi Tenaga Medis dan Tenaga Kesehatan tertentu, baik warga negara Indonesia maupun asing, dan berlaku untuk satu tempat praktik selama 5 tahun. SIP dapat diperpanjang dengan memenuhi persyaratan seperti memiliki STR (Surat Tanda Registrasi), tempat praktik, dan pemenuhan satuan kredit profesi. Permohonan SIP dapat diajukan secara online melalui sistem informasi yang terintegrasi dengan Sistem Informasi Kesehatan Nasional, dengan syarat utama memiliki STR dan tempat praktik. Dalam kondisi tertentu, SIP juga dapat diterbitkan oleh Menteri untuk pelaksanaan program internsip, pendidikan dokter spesialis, pemenuhan kebutuhan Tenaga Medis dan Tenaga Kesehatan di kawasan ekonomi khusus, daerah tertinggal, dan percepatan pelayanan kesehatan lainnya. Menteri juga dapat memberikan surat tugas kepada dokter spesialis yang telah memiliki SIP untuk bekerja pada fasilitas pelayanan kesehatan tertentu tanpa perlu memiliki SIP di tempat tersebut. Dengan demikian, SIP berfungsi sebagai izin resmi yang mengatur praktik Tenaga Medis dan Tenaga Kesehatan di Indonesia sesuai dengan peraturan yang berlaku (PP No. 28 Tahun 2024 Pasal 681, 682, 684; UU No. 17 Tahun 2023 Pasal 264, 267).",99343,multi,large,2366,326,10,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa kepanjangan dari STR dan SIP?,akronim,easy,"['surat tanda registrasi', 'surat izin praktik']",1.0,0.6,1.0,0.8666666666666667
+True,"Berdasarkan PP No. 32 Tahun 1996 (berlaku) Pasal 35, yang merujuk pada ketentuan Pasal 86 Undang-Undang No. 23 Tahun 1992 tentang Kesehatan, sanksi hukum bagi praktik kedokteran tanpa izin adalah sebagai berikut:
+
+- Barangsiapa dengan sengaja melakukan upaya kesehatan tanpa izin sebagaimana dimaksud dalam Pasal 4 ayat (1) UU No. 23 Tahun 1992 dipidana dengan denda paling banyak Rp 10.000.000,00 (sepuluh juta rupiah).
+
+Perlu dicatat bahwa UU No. 36 Tahun 2009 Pasal 191 yang mengatur sanksi pidana terhadap praktik pelayanan kesehatan tradisional tanpa izin telah dicabut dan tidak berlaku lagi, sehingga ketentuan yang berlaku saat ini adalah berdasarkan PP No. 32 Tahun 1996 tersebut.
+
+Dengan demikian, praktik kedokteran tanpa izin dapat dikenai sanksi administratif berupa denda maksimal Rp 10 juta sesuai ketentuan yang berlaku. Informasi lebih rinci mengenai pidana penjara atau denda yang lebih berat tidak ditemukan dalam dokumen yang tersedia.",9457,simple,small,955,141,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Apa sanksi hukum bagi praktik kedokteran tanpa izin?,sanksi,medium,"['sanksi', 'pidana', 'denda', 'penjara']",1.0,0.6,1.0,0.8666666666666667
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 439, setiap orang yang bukan Tenaga Medis atau Tenaga Kesehatan tetapi melakukan praktik sebagai Tenaga Medis atau Tenaga Kesehatan yang telah memiliki Surat Izin Praktik (SIP) dapat dipidana dengan pidana penjara paling lama 5 (lima) tahun atau pidana denda paling banyak Rp500.000.000,00 (lima ratus juta rupiah).
+
+Selain itu, menurut UU No. 17 Tahun 2023 (berlaku) Pasal 313 ayat (1), Tenaga Medis atau Tenaga Kesehatan yang melakukan praktik tanpa memiliki Surat Tanda Registrasi (STR) dan/atau SIP dikenai sanksi administratif berupa denda administratif, dengan tata cara pengenaan sanksi diatur lebih lanjut oleh Peraturan Pemerintah.
+
+Sebagai tambahan, PP No. 32 Tahun 1996 (berlaku) Pasal 35 juga mengatur bahwa melakukan upaya kesehatan tanpa izin dapat dikenai pidana denda paling banyak Rp10.000.000,00 (sepuluh juta rupiah), namun ketentuan ini berada pada level peraturan yang lebih rendah dan nilai sanksi lebih kecil dibandingkan UU No. 17 Tahun 2023.
+
+Dengan demikian, sanksi hukum utama bagi praktik kedokteran tanpa izin adalah pidana penjara hingga 5 tahun dan/atau denda hingga Rp500 juta sesuai UU No. 17 Tahun 2023 Pasal 439, serta sanksi administratif berupa denda bagi Tenaga Medis/Kesehatan yang tidak memiliki STR/SIP sesuai Pasal 313 UU yang sama.",13534,simple,large,1323,196,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Apa sanksi hukum bagi praktik kedokteran tanpa izin?,sanksi,medium,"['sanksi', 'pidana', 'denda', 'penjara']",1.0,0.4,1.0,0.7999999999999999
+True,"Sanksi hukum bagi praktik kedokteran tanpa izin bagi tenaga medis atau tenaga kesehatan yang melakukan praktik tanpa memiliki Surat Tanda Registrasi (STR) dan/atau Surat Izin Praktik (SIP) adalah sanksi administratif berupa denda administratif. Tata cara pengenaan sanksi administratif ini diatur lebih lanjut dengan Peraturan Pemerintah (UU No. 17 Tahun 2023 Pasal 313).
+
+Selain itu, bagi orang yang bukan tenaga medis atau tenaga kesehatan yang melakukan praktik sebagai tenaga medis atau tenaga kesehatan yang telah memiliki SIP, dapat dipidana dengan pidana penjara paling lama 5 tahun atau pidana denda paling banyak Rp500.000.000,00 (lima ratus juta rupiah) (UU No. 17 Tahun 2023 Pasal 439).
+
+Referensi:
+- UU No. 17 Tahun 2023 Pasal 313 tentang Kesehatan
+- UU No. 17 Tahun 2023 Pasal 439 tentang Kesehatan",52374,multi,small,811,123,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa sanksi hukum bagi praktik kedokteran tanpa izin?,sanksi,medium,"['sanksi', 'pidana', 'denda', 'penjara']",1.0,0.6,1.0,0.8666666666666667
+True,"Sanksi hukum bagi praktik kedokteran tanpa izin bagi tenaga medis atau tenaga kesehatan yang melakukan praktik tanpa memiliki Surat Tanda Registrasi (STR) dan/atau Surat Izin Praktik (SIP) adalah sanksi administratif berupa denda administratif. Tata cara pengenaan sanksi administratif ini diatur lebih lanjut dengan Peraturan Pemerintah (UU No. 17 Tahun 2023 Pasal 313).
+
+Selain itu, bagi orang yang bukan tenaga medis atau tenaga kesehatan yang melakukan praktik sebagai tenaga medis atau tenaga kesehatan yang telah memiliki SIP, dapat dikenai pidana penjara paling lama 5 tahun atau denda paling banyak Rp500.000.000 (UU No. 17 Tahun 2023 Pasal 439).
+
+Referensi:
+- UU No. 17 Tahun 2023 Pasal 313 tentang Kesehatan
+- UU No. 17 Tahun 2023 Pasal 439 tentang Kesehatan",41029,multi,large,768,117,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa sanksi hukum bagi praktik kedokteran tanpa izin?,sanksi,medium,"['sanksi', 'pidana', 'denda', 'penjara']",1.0,0.6,1.0,0.8666666666666667
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 263 dan PP No. 28 Tahun 2024 (berlaku) Pasal 68, prosedur pengajuan izin praktik dokter spesialis adalah sebagai berikut:
+
+1. **Kewajiban Memiliki SIP**  
+   Dokter spesialis sebagai Tenaga Medis tertentu wajib memiliki Surat Izin Praktik (SIP) untuk menjalankan praktik keprofesiannya (UU No. 17 Tahun 2023 Pasal 263 ayat (1) dan PP No. 28 Tahun 2024 Pasal 68 ayat (1)).
+
+2. **Pengajuan Permohonan SIP**  
+   Permohonan SIP dapat diajukan secara online melalui sistem informasi yang terintegrasi dengan Sistem Informasi Kesehatan Nasional (PP No. 28 Tahun 2024 Pasal 68 ayat (2)).
+
+3. **Persyaratan Pengajuan SIP**  
+   Dalam mengajukan permohonan SIP, dokter spesialis harus memiliki:  
+   a. Surat Tanda Registrasi (STR) yang masih berlaku;  
+   b. Tempat praktik yang jelas (PP No. 28 Tahun 2024 Pasal 68 ayat (3)).
+
+4. **Penerbitan SIP**  
+   SIP diterbitkan oleh Pemerintah Daerah kabupaten/kota tempat dokter spesialis menjalankan praktiknya (UU No. 17 Tahun 2023 Pasal 263 ayat (3) dan PP No. 28 Tahun 2024 Pasal 68 ayat (4)).
+
+5. **Batas Waktu Proses Penerbitan**  
+   Menteri menetapkan batas waktu maksimal proses penerbitan SIP. Jika proses penerbitan melebihi batas waktu tersebut, SIP secara otomatis terbit melalui sistem informasi yang terintegrasi (PP No. 28 Tahun 2024 Pasal 68 ayat (5) dan (6)).
+
+Dengan demikian, prosedur pengajuan izin praktik dokter spesialis meliputi pemenuhan persyaratan administrasi (STR dan tempat praktik), pengajuan permohonan secara online ke Pemerintah Daerah setempat, dan penerbitan SIP oleh Pemerintah Daerah dengan pengawasan batas waktu oleh Menteri.",13216,simple,small,1652,238,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Bagaimana prosedur pengajuan izin praktik dokter spesialis?,prosedur,medium,"['persyaratan', 'dokumen', 'pengajuan']",0.6666666666666666,0.8,0.8333333333333333,0.7666666666666666
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 267 (berlaku) dan PP No. 28 Tahun 2024 Pasal 689 (berlaku), prosedur pengajuan izin praktik dokter spesialis dapat dijelaskan sebagai berikut:
+
+1. **Memiliki Surat Izin Praktik (SIP) Dokter Spesialis**  
+   Dokter spesialis yang akan mengajukan izin praktik harus terlebih dahulu memiliki Surat Izin Praktik (SIP) sebagai syarat utama.
+
+2. **Permohonan Surat Tugas oleh Dinas Kesehatan Kabupaten/Kota**  
+   Untuk kepentingan pemenuhan kebutuhan pelayanan kedokteran di daerah tertentu, dinas kesehatan kabupaten/kota dapat mengajukan permohonan surat tugas kepada Menteri Kesehatan. Permohonan ini harus disertai:  
+   a. Hasil kajian kebutuhan pelayanan kedokteran spesialis di daerah tersebut.  
+   b. Pernyataan bahwa tidak ada dokter spesialis dengan keahlian dan kompetensi yang sama di kabupaten/kota tersebut.  
+   c. Usulan kandidat dokter spesialis yang akan diberikan surat tugas, lengkap dengan bukti SIP yang dimiliki oleh calon tersebut.
+
+3. **Pemberian Surat Tugas oleh Menteri Kesehatan**  
+   Menteri Kesehatan dapat memberikan surat tugas kepada dokter spesialis yang telah memiliki SIP untuk bekerja di Fasilitas Pelayanan Kesehatan tertentu tanpa harus memiliki SIP di tempat tersebut. Pemberian surat tugas ini dilakukan setelah melakukan kajian terhadap permohonan dan kebutuhan yang diajukan oleh dinas kesehatan kabupaten/kota.
+
+4. **Ketentuan Berlaku Surat Tugas**  
+   Surat tugas berlaku selama tidak ada dokter spesialis lain dengan keahlian dan kompetensi yang sama di daerah tersebut. Jika kemudian ada dokter spesialis lain yang memenuhi kriteria, surat tugas tersebut menjadi tidak berlaku.
+
+5. **Pendidikan dan Penggunaan Dokter Spesialis**  
+   Sesuai UU No. 17 Tahun 2023 Pasal 217 (berlaku), tenaga medis yang telah menyelesaikan program spesialis dapat langsung melaksanakan praktik setelah memiliki SIP, dan selama proses pendidikan spesialis/subspesialis, peserta didik dapat digunakan oleh fasilitas pelayanan kesehatan sebagai bagian dari proses pendidikan.
+
+**Kesimpulan:**  
+Prosedur pengajuan izin praktik dokter spesialis melibatkan pemenuhan persyaratan memiliki SIP, pengajuan permohonan surat tugas oleh dinas kesehatan kabupaten/kota berdasarkan kebutuhan dan ketiadaan dokter spesialis sejenis, serta pemberian surat tugas oleh Menteri Kesehatan setelah kajian. Surat tugas ini memungkinkan dokter spesialis untuk praktik di fasilitas pelayanan kesehatan tertentu tanpa SIP tambahan di tempat tersebut.
+
+Referensi utama:  
+- UU No. 17 Tahun 2023 Pasal 267 dan Pasal 217 (berlaku)  
+- PP No. 28 Tahun 2024 Pasal 689 (berlaku)",17009,simple,large,2613,346,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Bagaimana prosedur pengajuan izin praktik dokter spesialis?,prosedur,medium,"['persyaratan', 'dokumen', 'pengajuan']",0.6666666666666666,1.0,0.8333333333333333,0.8333333333333334
+True,"Berdasarkan dokumen yang tersedia, prosedur pengajuan izin praktik dokter spesialis diatur melalui pemberian surat tugas oleh Menteri Kesehatan. Surat tugas ini diberikan kepada dokter spesialis yang telah memiliki Surat Izin Praktik (SIP) untuk bekerja di fasilitas pelayanan kesehatan tertentu tanpa perlu mengajukan SIP baru di tempat tersebut. Pemberian surat tugas dilakukan dengan ketentuan sebagai berikut:
+
+1. Ada permintaan dari dinas kesehatan kabupaten/kota berdasarkan kebutuhan pelayanan.
+2. Tidak ada dokter spesialis dengan keahlian dan kompetensi yang sama di kabupaten/kota tersebut.
+3. Dokter spesialis yang mendapat surat tugas harus sudah memiliki SIP.
+
+Dinas kesehatan kabupaten/kota yang mengajukan permohonan surat tugas harus melampirkan:
+- Hasil kajian kebutuhan pelayanan kedokteran spesialis di daerah pengusul.
+- Pernyataan ketiadaan dokter spesialis dengan keahlian dan kompetensi yang sama di daerah tersebut.
+- Usulan kandidat dokter spesialis yang akan diusulkan beserta bukti SIP maksimal yang dimiliki calon kandidat.
+
+Surat tugas ini memiliki kedudukan hukum yang sama dengan SIP dan memberikan hak serta kewajiban yang sama kepada dokter spesialis yang berpraktik berdasarkan surat tugas tersebut.
+
+Ketentuan lebih lanjut mengenai tata cara pemberian surat tugas diatur dengan Peraturan Menteri.
+
+(Sumber: UU No. 17 Tahun 2023 Pasal 267, PP No. 28 Tahun 2024 Pasal 689 dan Pasal 693 tentang Peraturan Pelaksanaan UU No. 17 Tahun 2023)",69587,multi,small,1470,205,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana prosedur pengajuan izin praktik dokter spesialis?,prosedur,medium,"['persyaratan', 'dokumen', 'pengajuan']",0.6666666666666666,0.8,0.8333333333333333,0.7666666666666666
+True,Agent stopped due to max iterations.,77630,multi,large,36,6,10,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana prosedur pengajuan izin praktik dokter spesialis?,prosedur,medium,"['persyaratan', 'dokumen', 'pengajuan']",0.0,0.0,0.036,0.011999999999999999
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 276 dan Pasal 277, kewajiban dokter dalam memberikan informed consent dapat disimpulkan sebagai berikut:
+
+1. Dokter wajib memberikan informasi yang lengkap dan memadai kepada pasien mengenai kondisi kesehatannya serta pelayanan kesehatan yang akan diberikan (Pasal 276 ayat (a) dan (b)). Ini mencakup penjelasan yang cukup agar pasien dapat memahami tindakan medis yang akan dilakukan.
+
+2. Dokter harus menghormati hak pasien untuk menyetujui atau menolak tindakan medis, kecuali dalam kasus tindakan medis yang diperlukan untuk pencegahan penyakit menular dan penanggulangan kejadian luar biasa atau wabah (Pasal 276 ayat (d)).
+
+3. Dokter berkewajiban memberikan pelayanan kesehatan sesuai dengan kebutuhan medis, standar profesi, dan pelayanan yang bermutu (Pasal 276 ayat (c)).
+
+4. Pasien juga berkewajiban memberikan informasi yang lengkap dan jujur tentang masalah kesehatannya kepada dokter (Pasal 277 ayat (a)) sehingga dokter dapat memberikan informasi dan tindakan yang tepat.
+
+Dengan demikian, kewajiban dokter dalam memberikan informed consent adalah memberikan informasi yang jelas, lengkap, dan memadai mengenai kondisi kesehatan dan tindakan medis yang akan dilakukan agar pasien dapat membuat keputusan yang sadar dan berdasarkan informasi tersebut. Hal ini sesuai dengan prinsip hak pasien untuk mendapatkan informasi dan memberikan persetujuan secara sadar (informed consent).
+
+Informasi ini merujuk pada UU No. 17 Tahun 2023 (berlaku) Pasal 276 dan Pasal 277.",15538,simple,small,1526,212,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Apa kewajiban dokter dalam memberikan informed consent?,etika,medium,"['informed consent', 'persetujuan', 'informasi']",1.0,0.6,1.0,0.8666666666666667
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 293, kewajiban dokter (Tenaga Medis) dalam memberikan informed consent adalah sebagai berikut:
+
+1. Setiap tindakan Pelayanan Kesehatan yang dilakukan oleh Tenaga Medis harus mendapat persetujuan dari Pasien (ayat 1).
+
+2. Persetujuan tersebut diberikan setelah Pasien menerima penjelasan yang memadai dari Tenaga Medis (ayat 2).
+
+3. Penjelasan yang diberikan oleh Tenaga Medis paling sedikit harus mencakup:
+   a. Diagnosis;
+   b. Indikasi tindakan;
+   c. Tindakan Pelayanan Kesehatan yang akan dilakukan dan tujuannya;
+   d. Risiko dan komplikasi yang mungkin terjadi;
+   e. Alternatif tindakan lain beserta risikonya;
+   f. Risiko apabila tindakan tidak dilakukan;
+   g. Prognosis setelah tindakan dilakukan (ayat 3).
+
+4. Persetujuan dapat diberikan secara tertulis atau lisan (ayat 4).
+
+5. Untuk tindakan yang invasif dan/atau mengandung risiko tinggi, persetujuan harus diperoleh secara tertulis sebelum tindakan dilakukan (ayat 5).
+
+6. Persetujuan tertulis harus ditandatangani oleh Pasien atau yang mewakili dan disaksikan oleh Tenaga Medis atau Tenaga Kesehatan lain (ayat 8).
+
+7. Dalam keadaan gawat darurat dimana Pasien tidak cakap memberikan persetujuan dan tidak ada pihak yang dapat dimintai persetujuan, tindakan dapat dilakukan tanpa persetujuan terlebih dahulu, namun harus berdasarkan kepentingan terbaik Pasien dan diinformasikan setelah Pasien atau yang mewakili hadir (ayat 9-11).
+
+Selain itu, berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 738 ayat (3), Pasien mematuhi nasihat dan petunjuk Tenaga Medis setelah mendapatkan penjelasan secara lengkap dan memadai, yang mengindikasikan kewajiban Tenaga Medis untuk memberikan penjelasan yang cukup.
+
+Kesimpulannya, kewajiban dokter dalam memberikan informed consent adalah memberikan penjelasan yang lengkap dan memadai mengenai tindakan medis yang akan dilakukan, termasuk risiko, alternatif, dan konsekuensi, serta memperoleh persetujuan Pasien secara lisan atau tertulis sesuai dengan jenis tindakan yang akan dilakukan, sebagaimana diatur dalam UU No. 17 Tahun 2023 Pasal 293 (berlaku).",16670,simple,large,2109,283,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Apa kewajiban dokter dalam memberikan informed consent?,etika,medium,"['informed consent', 'persetujuan', 'informasi']",1.0,0.8,1.0,0.9333333333333332
+True,"Kewajiban dokter dalam memberikan informed consent secara spesifik tidak dijelaskan secara langsung dalam dokumen yang tersedia. Namun, berdasarkan prinsip umum pelayanan kesehatan yang tercermin dalam dokumen, dapat disimpulkan beberapa kewajiban dokter terkait informed consent sebagai berikut:
+
+1. Dokter wajib memberikan informasi yang lengkap dan jujur mengenai kondisi kesehatan pasien serta rencana terapi yang akan dilakukan, agar pasien dapat membuat keputusan yang sadar dan bertanggung jawab terhadap pengobatan yang direkomendasikan. Hal ini sejalan dengan kewajiban pasien untuk menerima konsekuensi atas keputusan pribadinya menolak atau menerima terapi yang direkomendasikan oleh tenaga medis (PP No. 28 Tahun 2024 Pasal 741).
+
+2. Dokter harus menghormati hak pasien untuk menolak atau menerima rencana terapi setelah mendapatkan penjelasan yang memadai, sehingga pasien dapat mematuhi atau tidak mematuhi petunjuk dokter dengan penuh kesadaran (PP No. 28 Tahun 2024 Pasal 741).
+
+3. Dokter juga berkewajiban memberikan petunjuk yang jelas untuk penyembuhan penyakit atau masalah kesehatan pasien, yang menjadi bagian dari proses informed consent agar pasien memahami dan dapat mematuhi nasihat tersebut (PP No. 28 Tahun 2024 Pasal 741).
+
+4. Selain itu, dokter harus menghormati hak pasien dan menjaga komunikasi yang baik selama proses pelayanan kesehatan, sesuai dengan kewajiban pasien untuk menghormati hak tenaga medis dan tenaga kesehatan lainnya di fasilitas pelayanan kesehatan (PP No. 28 Tahun 2024 Pasal 741).
+
+Meskipun dokumen tidak secara eksplisit menyebutkan istilah ""informed consent,"" kewajiban memberikan informasi lengkap dan jujur serta menghormati keputusan pasien mengindikasikan bahwa dokter harus menjalankan proses informed consent sebagai bagian dari pelayanan kesehatan yang etis dan legal.
+
+Referensi:
+- PP No. 28 Tahun 2024 Pasal 741 tentang Tentang Peraturan Pelaksanaan Undang-Undang Nomor 17 Tahun 2023
+- UU No. 17 Tahun 2023 Pasal 277 tentang Tentang Kesehatan",59730,multi,small,2006,276,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa kewajiban dokter dalam memberikan informed consent?,etika,medium,"['informed consent', 'persetujuan', 'informasi']",0.6666666666666666,0.8,0.8333333333333333,0.7666666666666666
+True,"Kewajiban dokter dalam memberikan informed consent secara spesifik tidak dijelaskan secara eksplisit dalam dokumen yang tersedia. Namun, berdasarkan prinsip umum pelayanan kesehatan yang tercantum, dapat disimpulkan beberapa kewajiban dokter terkait informed consent sebagai berikut:
+
+1. Dokter harus memberikan informasi yang cukup dan jelas mengenai rencana terapi atau tindakan medis yang akan dilakukan kepada pasien, agar pasien dapat membuat keputusan yang sadar dan bertanggung jawab atas persetujuan atau penolakan terapi tersebut. Hal ini dapat ditafsirkan dari kewajiban pasien untuk menerima konsekuensi atas keputusan pribadinya menolak rencana terapi yang direkomendasikan oleh tenaga medis.
+
+2. Dokter harus menghormati keputusan pasien, termasuk keputusan untuk menolak atau tidak mematuhi petunjuk medis, setelah pasien diberikan informasi yang memadai.
+
+3. Dokter juga berkewajiban memberikan petunjuk dan nasihat yang harus dipatuhi pasien untuk penyembuhan penyakit atau masalah kesehatannya, yang merupakan bagian dari komunikasi dalam informed consent.
+
+Kesimpulannya, kewajiban dokter dalam memberikan informed consent meliputi penyampaian informasi yang lengkap dan jelas tentang rencana terapi, menghormati keputusan pasien setelah pemberian informasi tersebut, serta memberikan petunjuk medis yang harus dipatuhi pasien.
+
+Catatan: Dokumen yang tersedia lebih menekankan kewajiban pasien, sehingga penjabaran kewajiban dokter di atas merupakan interpretasi dari kewajiban pasien dan prinsip pelayanan kesehatan yang berlaku.
+
+(Sumber: PP No. 28 Tahun 2024 Pasal 741 dan Pasal 738; UU No. 17 Tahun 2023 Pasal 277)",61884,multi,large,1636,213,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa kewajiban dokter dalam memberikan informed consent?,etika,medium,"['informed consent', 'persetujuan', 'informasi']",1.0,0.6,1.0,0.8666666666666667
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 299 (berlaku) disebutkan bahwa ketentuan lebih lanjut mengenai rekam medis diatur dengan Peraturan Pemerintah. Selanjutnya, PP No. 28 Tahun 2024 (berlaku) mengatur secara rinci ketentuan rekam medis sebagai berikut:
+
+1. **Kewajiban Membuat Rekam Medis**  
+   Pasal 778 ayat (1) PP No. 28 Tahun 2024 menyatakan bahwa setiap Tenaga Medis dan Tenaga Kesehatan yang memberikan Pelayanan Kesehatan perseorangan wajib membuat rekam medis.  
+   Ayat (2) menambahkan bahwa jika pelayanan kesehatan perseorangan dilakukan di Fasilitas Pelayanan Kesehatan selain tempat praktik mandiri, maka penyelenggaraan rekam medis menjadi tanggung jawab Fasilitas Pelayanan Kesehatan.
+
+2. **Isi dan Kerahasiaan Rekam Medis**  
+   Pasal 778 ayat (3) menjelaskan bahwa rekam medis merupakan dokumen yang berisi data identitas pasien, pemeriksaan, pengobatan, tindakan, dan pelayanan lain yang telah diberikan kepada pasien, termasuk persetujuan tindakan pelayanan kesehatan.  
+   Ayat (4) menegaskan bahwa rekam medis harus disimpan dan dijaga kerahasiaannya oleh Tenaga Medis, Tenaga Kesehatan, dan pimpinan Fasilitas Pelayanan Kesehatan.
+
+3. **Penyelenggaraan Rekam Medis Elektronik**  
+   Pasal 779 ayat (1) mengatur bahwa rekam medis wajib diselenggarakan secara elektronik sesuai ketentuan peraturan perundang-undangan.  
+   Ayat (2) memberikan pengecualian apabila Fasilitas Pelayanan Kesehatan mengalami hambatan teknis sehingga tidak dapat menyelenggarakan rekam medis secara elektronik, maka dapat digunakan rekam medis nonelektronik sampai hambatan tersebut selesai.
+
+4. **Kewajiban Rumah Sakit**  
+   Pasal 840 PP No. 28 Tahun 2024 menegaskan bahwa kewajiban Rumah Sakit dalam menyelenggarakan rekam medis dilaksanakan sesuai dengan ketentuan peraturan perundang-undangan.
+
+Singkatnya, rekam medis di Indonesia wajib dibuat oleh tenaga medis dan tenaga kesehatan yang memberikan pelayanan, harus memuat data lengkap terkait pasien dan pelayanan, dijaga kerahasiaannya, dan diselenggarakan secara elektronik kecuali ada hambatan teknis. Rumah sakit dan fasilitas pelayanan kesehatan bertanggung jawab atas penyelenggaraan rekam medis sesuai ketentuan yang berlaku.",12588,simple,small,2190,278,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Bagaimana ketentuan rekam medis menurut peraturan yang berlaku?,administrasi,medium,"['rekam medis', 'penyimpanan', 'kerahasiaan']",0.6666666666666666,1.0,0.8333333333333333,0.8333333333333334
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 296 dan Pasal 299, serta Peraturan Pemerintah No. 28 Tahun 2024 (berlaku) Pasal 778 dan Pasal 783, ketentuan mengenai rekam medis di Indonesia adalah sebagai berikut:
+
+1. **Kewajiban Pembuatan Rekam Medis**  
+   - Setiap Tenaga Medis dan Tenaga Kesehatan yang memberikan pelayanan kesehatan perseorangan wajib membuat rekam medis (UU No. 17 Tahun 2023 Pasal 296 ayat (1); PP No. 28 Tahun 2024 Pasal 778 ayat (1)).  
+   - Jika pelayanan kesehatan perseorangan dilakukan di fasilitas pelayanan kesehatan selain tempat praktik mandiri, maka penyelenggaraan rekam medis menjadi tanggung jawab fasilitas pelayanan kesehatan tersebut (UU No. 17 Tahun 2023 Pasal 296 ayat (2); PP No. 28 Tahun 2024 Pasal 778 ayat (2)).
+
+2. **Isi dan Penyimpanan Rekam Medis**  
+   - Rekam medis merupakan dokumen yang berisi data identitas pasien, pemeriksaan, pengobatan, tindakan, dan pelayanan lain yang telah diberikan, termasuk persetujuan tindakan pelayanan kesehatan (PP No. 28 Tahun 2024 Pasal 778 ayat (3)).  
+   - Rekam medis harus segera dilengkapi setelah pasien selesai menerima pelayanan kesehatan (UU No. 17 Tahun 2023 Pasal 296 ayat (3)).  
+   - Setiap catatan rekam medis harus dibubuhi nama, waktu, dan tanda tangan tenaga medis atau tenaga kesehatan yang memberikan pelayanan atau tindakan (UU No. 17 Tahun 2023 Pasal 296 ayat (4)).  
+   - Rekam medis harus disimpan dan dijaga kerahasiaannya oleh tenaga medis, tenaga kesehatan, dan pimpinan fasilitas pelayanan kesehatan (UU No. 17 Tahun 2023 Pasal 296 ayat (5); PP No. 28 Tahun 2024 Pasal 778 ayat (4)).
+
+3. **Pembukaan Isi Rekam Medis**  
+   - Pembukaan isi rekam medis dapat dilakukan atas persetujuan pasien dan/atau tanpa persetujuan pasien (PP No. 28 Tahun 2024 Pasal 783 ayat (1)).  
+   - Permintaan pembukaan isi rekam medis harus dilakukan secara tertulis, baik secara elektronik maupun nonelektronik (PP No. 28 Tahun 2024 Pasal 783 ayat (2) dan (3)).  
+   - Pembukaan isi rekam medis atas persetujuan pasien dilakukan untuk kepentingan pemeliharaan kesehatan, pengobatan, penyembuhan, perawatan pasien; permintaan pasien sendiri; dan/atau keperluan administratif, pembayaran asuransi, atau jaminan pembiayaan kesehatan (PP No. 28 Tahun 2024 Pasal 783 ayat (5)).  
+   - Jika pasien tidak cakap, persetujuan dapat diberikan oleh keluarga terdekat atau pengampu sesuai ketentuan peraturan perundang-undangan (PP No. 28 Tahun 2024 Pasal 783 ayat (6) sampai (9)).  
+   - Pembukaan isi rekam medis tanpa persetujuan pasien dapat dilakukan untuk kepentingan penegakan hukum, penanggulangan kejadian luar biasa, pendidikan dan penelitian terbatas, perlindungan terhadap bahaya ancaman keselamatan orang lain atau masyarakat, dan kepentingan lain yang diatur dalam peraturan perundang-undangan (PP No. 28 Tahun 2024 Pasal 783 ayat (11)).
+
+4. **Pengaturan Lebih Lanjut**  
+   - Ketentuan lebih lanjut mengenai rekam medis diatur dengan Peraturan Pemerintah, yang saat ini diatur dalam PP No. 28 Tahun 2024 (UU No. 17 Tahun 2023 Pasal 299).
+
+Kesimpulannya, rekam medis adalah dokumen wajib yang harus dibuat oleh tenaga medis dan tenaga kesehatan, berisi data lengkap pelayanan kesehatan pasien, yang harus dijaga kerahasiaannya dan hanya dapat dibuka sesuai ketentuan yang diatur dalam PP No. 28 Tahun 2024 (berlaku) dan UU No. 17 Tahun 2023 (berlaku).",21174,simple,large,3348,490,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Bagaimana ketentuan rekam medis menurut peraturan yang berlaku?,administrasi,medium,"['rekam medis', 'penyimpanan', 'kerahasiaan']",1.0,1.0,1.0,1.0
+True,"Ketentuan rekam medis menurut peraturan yang berlaku adalah sebagai berikut:
+
+1. Kewajiban Pembuatan Rekam Medis  
+   Setiap Tenaga Medis dan Tenaga Kesehatan yang memberikan pelayanan kesehatan perseorangan wajib membuat rekam medis. Jika pelayanan dilakukan di fasilitas pelayanan kesehatan selain praktik mandiri, maka penyelenggaraan rekam medis menjadi tanggung jawab fasilitas tersebut (PP No. 28 Tahun 2024 Pasal 778; UU No. 17 Tahun 2023 Pasal 296).
+
+2. Isi dan Fungsi Rekam Medis  
+   Rekam medis merupakan dokumen yang memuat data identitas pasien, pemeriksaan, pengobatan, tindakan, dan pelayanan lain yang telah diberikan, termasuk persetujuan tindakan pelayanan kesehatan (PP No. 28 Tahun 2024 Pasal 778).
+
+3. Pengisian dan Penyimpanan Rekam Medis  
+   Rekam medis harus segera dilengkapi setelah pasien selesai menerima pelayanan kesehatan. Setiap catatan harus mencantumkan nama, waktu, dan tanda tangan tenaga medis atau tenaga kesehatan yang memberikan pelayanan atau tindakan. Rekam medis harus disimpan dan dijaga kerahasiaannya oleh tenaga medis, tenaga kesehatan, dan pimpinan fasilitas pelayanan kesehatan (UU No. 17 Tahun 2023 Pasal 296; PP No. 28 Tahun 2024 Pasal 778).
+
+4. Kepemilikan dan Keamanan Rekam Medis  
+   Dokumen rekam medis adalah milik fasilitas pelayanan kesehatan. Fasilitas wajib menjaga keamanan, keutuhan, kerahasiaan, dan ketersediaan data dalam dokumen rekam medis (PP No. 28 Tahun 2024 Pasal 784).
+
+5. Pembukaan Isi Rekam Medis  
+   Pembukaan isi rekam medis dapat dilakukan atas persetujuan pasien dan/atau tanpa persetujuan pasien, dengan permintaan secara tertulis dan dapat dilakukan secara elektronik atau nonelektronik. Pembukaan isi rekam medis dilakukan terbatas sesuai kebutuhan, misalnya untuk kepentingan pemeliharaan kesehatan, permintaan pasien, atau administratif seperti pembayaran asuransi. Jika pasien tidak cakap, persetujuan dapat diberikan oleh keluarga terdekat atau pengampu sesuai ketentuan peraturan perundang-undangan (PP No. 28 Tahun 2024 Pasal 783).
+
+6. Dasar Hukum Lebih Lanjut  
+   Ketentuan lebih lanjut mengenai rekam medis diatur dengan Peraturan Pemerintah yang mengacu pada Undang-Undang Nomor 17 Tahun 2023 tentang Kesehatan (UU No. 17 Tahun 2023 Pasal 299).
+
+Dengan demikian, rekam medis adalah dokumen wajib yang harus dibuat, dilengkapi, disimpan dengan aman dan rahasia oleh tenaga medis dan fasilitas pelayanan kesehatan, serta pembukaannya diatur secara ketat sesuai kebutuhan dan persetujuan pasien atau pihak yang berwenang. 
+
+(Sumber: PP No. 28 Tahun 2024 Pasal 778, 783, 784; UU No. 17 Tahun 2023 Pasal 296, 299)",105773,multi,small,2602,359,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana ketentuan rekam medis menurut peraturan yang berlaku?,administrasi,medium,"['rekam medis', 'penyimpanan', 'kerahasiaan']",1.0,0.8,1.0,0.9333333333333332
+True,"Ketentuan rekam medis menurut peraturan yang berlaku di Indonesia adalah sebagai berikut:
+
+1. Kewajiban pembuatan rekam medis  
+   Setiap Tenaga Medis dan Tenaga Kesehatan yang memberikan pelayanan kesehatan perseorangan wajib membuat rekam medis. Jika pelayanan dilakukan di fasilitas pelayanan kesehatan selain praktik mandiri, maka penyelenggaraan rekam medis menjadi tanggung jawab fasilitas tersebut (PP No. 28 Tahun 2024 Pasal 778 ayat 1 dan 2; UU No. 17 Tahun 2023 Pasal 296 ayat 1 dan 2).
+
+2. Isi dan fungsi rekam medis  
+   Rekam medis merupakan dokumen yang berisi data identitas pasien, pemeriksaan, pengobatan, tindakan, dan pelayanan lain yang telah diberikan, termasuk persetujuan tindakan pelayanan kesehatan (PP No. 28 Tahun 2024 Pasal 778 ayat 3).
+
+3. Penyimpanan dan kerahasiaan  
+   Rekam medis harus disimpan dan dijaga kerahasiaannya oleh Tenaga Medis, Tenaga Kesehatan, dan pimpinan fasilitas pelayanan kesehatan. Fasilitas pelayanan kesehatan juga wajib menjaga keamanan, keutuhan, kerahasiaan, dan ketersediaan data rekam medis karena dokumen rekam medis adalah milik fasilitas tersebut (PP No. 28 Tahun 2024 Pasal 778 ayat 4 dan Pasal 784).
+
+4. Pelengkapan dan pencatatan rekam medis  
+   Rekam medis harus segera dilengkapi setelah pasien selesai menerima pelayanan kesehatan. Setiap catatan dalam rekam medis harus dibubuhi nama, waktu, dan tanda tangan tenaga medis atau tenaga kesehatan yang memberikan pelayanan atau tindakan (UU No. 17 Tahun 2023 Pasal 296 ayat 3 dan 4).
+
+5. Pembukaan isi rekam medis  
+   Pembukaan isi rekam medis dapat dilakukan atas persetujuan pasien atau tanpa persetujuan pasien, dengan permintaan secara tertulis yang dapat dilakukan secara elektronik atau non-elektronik. Pembukaan isi rekam medis dilakukan terbatas sesuai kebutuhan, dan atas persetujuan pasien dapat dilakukan untuk kepentingan pemeliharaan kesehatan, pengobatan, permintaan pasien, atau administratif seperti pembayaran asuransi. Jika pasien tidak cakap, persetujuan dapat diberikan oleh keluarga terdekat atau pengampu sesuai ketentuan peraturan perundang-undangan (PP No. 28 Tahun 2024 Pasal 783).
+
+6. Dasar hukum dan peraturan lebih lanjut  
+   Ketentuan lebih lanjut mengenai rekam medis diatur dalam Peraturan Pemerintah yang mengacu pada Undang-Undang Kesehatan (UU No. 17 Tahun 2023 Pasal 299).
+
+Dengan demikian, rekam medis adalah dokumen wajib yang harus dibuat oleh tenaga kesehatan, berisi data lengkap pelayanan kesehatan, disimpan dan dijaga kerahasiaannya oleh fasilitas kesehatan, dengan pembukaan isi rekam medis diatur secara ketat dan terbatas sesuai kebutuhan serta persetujuan pasien atau pihak yang berwenang. 
+
+Referensi:  
+- PP No. 28 Tahun 2024 Pasal 778, 783, 784  
+- UU No. 17 Tahun 2023 Pasal 296, 299",110316,multi,large,2755,387,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana ketentuan rekam medis menurut peraturan yang berlaku?,administrasi,medium,"['rekam medis', 'penyimpanan', 'kerahasiaan']",1.0,0.8,1.0,0.9333333333333332
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 189 dan PP No. 28 Tahun 2024 (berlaku) Pasal 811, hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis dapat dijelaskan sebagai berikut:
+
+1. **Tanggung Jawab Rumah Sakit**  
+   UU No. 17 Tahun 2023 Pasal 189 mengatur kewajiban Rumah Sakit yang meliputi penyelenggaraan pelayanan kesehatan yang aman, bermutu, dan sesuai standar pelayanan Rumah Sakit. Rumah Sakit wajib memberikan pelayanan yang mengutamakan kepentingan pasien, menyediakan sarana dan prasarana yang memadai, menyelenggarakan rekam medis, serta melindungi dan memberikan bantuan hukum kepada tenaga medis yang menjalankan praktik kedokteran di lingkungan Rumah Sakit. Dengan demikian, Rumah Sakit memiliki tanggung jawab administratif dan operasional untuk mendukung praktik kedokteran yang dilakukan oleh tenaga medis.
+
+2. **Tanggung Jawab Pemerintah dan Penyelenggaraan Rumah Sakit**  
+   PP No. 28 Tahun 2024 Pasal 811 menegaskan bahwa Pemerintah Pusat dan Daerah bertanggung jawab menyediakan Rumah Sakit sesuai kebutuhan masyarakat, menjamin pembiayaan pelayanan kesehatan, serta memberikan perlindungan kepada Rumah Sakit dan masyarakat pengguna jasa pelayanan. Ini menunjukkan bahwa tanggung jawab penyelenggaraan Rumah Sakit juga berada pada pemerintah sebagai regulator dan fasilitator.
+
+3. **Hubungan dengan UU Praktik Kedokteran**  
+   UU Praktik Kedokteran mengatur kewajiban dan tanggung jawab tenaga medis dalam menjalankan praktik kedokteran secara profesional dan sesuai standar. Sementara itu, UU Rumah Sakit mengatur kewajiban institusi Rumah Sakit dalam menyediakan fasilitas, perlindungan, dan dukungan bagi tenaga medis tersebut. Dengan demikian, tanggung jawab medis bersifat kolaboratif antara tenaga medis (berdasarkan UU Praktik Kedokteran) dan institusi Rumah Sakit (berdasarkan UU Rumah Sakit), di mana Rumah Sakit bertanggung jawab menyediakan lingkungan yang mendukung praktik kedokteran yang aman dan bermutu.
+
+4. **Perlindungan Hukum dan Standar Mutu**  
+   UU Rumah Sakit juga mengatur bahwa Rumah Sakit wajib melindungi dan memberikan bantuan hukum kepada tenaga medis dalam melaksanakan tugasnya (Pasal 189 ayat (1) huruf s UU No. 17 Tahun 2023). Hal ini memperkuat hubungan tanggung jawab antara institusi dan tenaga medis dalam konteks praktik kedokteran.
+
+Kesimpulannya, UU Praktik Kedokteran dan UU Rumah Sakit saling melengkapi dalam hal tanggung jawab medis: UU Praktik Kedokteran mengatur kewajiban tenaga medis dalam praktiknya, sedangkan UU Rumah Sakit mengatur kewajiban institusi Rumah Sakit dalam menyediakan fasilitas, perlindungan, dan dukungan yang diperlukan agar praktik kedokteran dapat berjalan dengan aman, bermutu, dan sesuai standar. Pemerintah juga memiliki peran dalam menjamin penyelenggaraan Rumah Sakit yang memenuhi kebutuhan masyarakat sesuai ketentuan peraturan perundang-undangan.",18078,simple,small,2898,384,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Bagaimana hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis?,analisis,hard,"['tanggung jawab', 'rumah sakit', 'praktik kedokteran']",1.0,1.0,1.0,1.0
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 193 dan PP No. 28 Tahun 2024 (berlaku) Pasal 735 dan Pasal 738, hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis dapat dijelaskan sebagai berikut:
+
+1. **Tanggung Jawab Rumah Sakit**  
+   UU No. 17 Tahun 2023 Pasal 193 menyatakan bahwa Rumah Sakit bertanggung jawab secara hukum atas semua kerugian yang ditimbulkan akibat kelalaian yang dilakukan oleh Sumber Daya Manusia Kesehatan Rumah Sakit. Ini berarti Rumah Sakit sebagai institusi memiliki tanggung jawab hukum terhadap tindakan medis yang dilakukan oleh tenaga medis dan tenaga kesehatan yang bekerja di dalamnya.
+
+2. **Kewajiban Tenaga Medis dan Tenaga Kesehatan**  
+   PP No. 28 Tahun 2024 Pasal 735 mengatur kewajiban Tenaga Medis dan Tenaga Kesehatan dalam menjalankan praktik, yaitu memberikan pelayanan sesuai standar profesi, memperoleh persetujuan pasien, menjaga kerahasiaan kesehatan pasien, membuat catatan medis, dan merujuk pasien bila diperlukan. Kewajiban ini menunjukkan bahwa tenaga medis bertanggung jawab secara profesional dan etis dalam praktik kedokteran.
+
+3. **Kewajiban Pasien dan Hubungan dengan Tenaga Medis**  
+   PP No. 28 Tahun 2024 Pasal 738 mengatur kewajiban pasien, termasuk memberikan informasi yang lengkap dan jujur, mematuhi nasihat tenaga medis, dan memberikan imbalan jasa. Hal ini menunjukkan adanya hubungan timbal balik antara pasien dan tenaga medis yang juga menjadi bagian dari tanggung jawab pelayanan kesehatan.
+
+4. **Rekam Medis dan Dokumentasi**  
+   PP No. 28 Tahun 2024 Pasal 840 menegaskan kewajiban Rumah Sakit dalam menyelenggarakan rekam medis sesuai ketentuan peraturan perundang-undangan, yang merupakan bagian penting dalam pertanggungjawaban medis baik bagi tenaga medis maupun institusi rumah sakit.
+
+**Kesimpulan:**  
+UU Praktik Kedokteran (diatur dalam PP No. 28 Tahun 2024) menempatkan tanggung jawab profesional dan etis pada tenaga medis dan tenaga kesehatan dalam memberikan pelayanan sesuai standar profesi, sedangkan UU Rumah Sakit (UU No. 17 Tahun 2023) menempatkan tanggung jawab hukum atas kelalaian tenaga medis tersebut pada institusi Rumah Sakit. Dengan demikian, tanggung jawab medis bersifat ganda: secara profesional pada tenaga medis dan secara hukum pada Rumah Sakit sebagai penyelenggara pelayanan kesehatan. Hal ini mencerminkan hubungan sinergis antara kedua peraturan dalam menjamin perlindungan hukum bagi pasien dan akuntabilitas pelayanan kesehatan.",14736,simple,large,2483,344,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Bagaimana hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis?,analisis,hard,"['tanggung jawab', 'rumah sakit', 'praktik kedokteran']",1.0,1.0,1.0,1.0
+True,Agent stopped due to max iterations.,110093,multi,small,36,6,9,6,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis?,analisis,hard,"['tanggung jawab', 'rumah sakit', 'praktik kedokteran']",0.0,0.0,0.036,0.011999999999999999
+True,Agent stopped due to max iterations.,66110,multi,large,36,6,8,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana hubungan antara UU Praktik Kedokteran dengan UU Rumah Sakit dalam hal tanggung jawab medis?,analisis,hard,"['tanggung jawab', 'rumah sakit', 'praktik kedokteran']",0.0,0.0,0.036,0.011999999999999999
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku), perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis dapat dijelaskan sebagai berikut:
+
+1. **Sanksi Pidana**  
+   - Diatur dalam Pasal 440 dan Pasal 441 UU No. 17 Tahun 2023.  
+   - Sanksi pidana dikenakan kepada Tenaga Medis atau Tenaga Kesehatan yang melakukan kealpaan (malpraktik) yang mengakibatkan luka berat atau kematian pada pasien.  
+     - Jika mengakibatkan luka berat, pidana penjara paling lama 3 tahun atau denda paling banyak Rp250.000.000,00 (Pasal 440 ayat 1).  
+     - Jika mengakibatkan kematian, pidana penjara paling lama 5 tahun atau denda paling banyak Rp500.000.000,00 (Pasal 440 ayat 2).  
+   - Selain itu, sanksi pidana juga dikenakan pada orang yang bukan Tenaga Medis atau Tenaga Kesehatan tetapi melakukan praktik sebagai Tenaga Medis/Kesehatan tanpa izin (Pasal 439), atau yang menggunakan identitas palsu sebagai Tenaga Medis/Kesehatan (Pasal 441).  
+   - Sanksi pidana berupa penjara dan/atau denda.
+
+2. **Sanksi Perdata**  
+   - Dalam dokumen yang tersedia, tidak ditemukan ketentuan khusus mengenai sanksi perdata dalam kasus malpraktik medis.  
+   - Namun secara umum dalam hukum Indonesia, sanksi perdata terkait malpraktik medis biasanya berupa tuntutan ganti rugi atas kerugian materiil dan immateriil yang dialami pasien akibat malpraktik.  
+   - Sanksi perdata ini diajukan melalui gugatan perdata di pengadilan dan tidak diatur secara spesifik dalam UU No. 17 Tahun 2023 yang tersedia.
+
+**Kesimpulan:**  
+- **Sanksi pidana** dalam malpraktik medis diatur secara tegas dalam UU No. 17 Tahun 2023 (berlaku) dengan ancaman pidana penjara dan/atau denda bagi Tenaga Medis/Kesehatan yang lalai hingga menyebabkan luka berat atau kematian pasien, serta bagi pelaku praktik tanpa izin atau penggunaan identitas palsu.  
+- **Sanksi perdata** tidak diatur secara spesifik dalam UU tersebut, tetapi biasanya berupa tuntutan ganti rugi yang diajukan secara terpisah melalui proses perdata.
+
+Jika Anda membutuhkan informasi lebih rinci mengenai sanksi perdata malpraktik medis, dokumen hukum lain seperti KUHPerdata atau peraturan perundang-undangan terkait tanggung jawab perdata dapat dijadikan rujukan, namun tidak tersedia dalam dokumen yang diberikan saat ini.",14073,simple,small,2251,312,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Apa perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis?,hukum,hard,"['pidana', 'perdata', 'malpraktik', 'perbedaan']",1.0,1.0,1.0,1.0
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku), khususnya Pasal 440 dan Pasal 308, berikut perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis:
+
+1. **Sanksi Pidana**  
+   - Diatur dalam Pasal 440 UU No. 17 Tahun 2023, sanksi pidana dikenakan kepada Tenaga Medis atau Tenaga Kesehatan yang melakukan kealpaan dalam pelaksanaan pelayanan kesehatan yang mengakibatkan luka berat atau kematian pada pasien.  
+   - Contoh sanksi pidana:  
+     - Kealpaan yang mengakibatkan luka berat dapat dipidana dengan penjara paling lama 3 tahun atau denda paling banyak Rp250.000.000,00.  
+     - Kealpaan yang mengakibatkan kematian dapat dipidana dengan penjara paling lama 5 tahun atau denda paling banyak Rp500.000.000,00.  
+   - Proses penyidikan terhadap dugaan tindak pidana malpraktik harus didahului dengan permohonan rekomendasi dari majelis profesi (Pasal 308 ayat (1) dan (3)).
+
+2. **Sanksi Perdata**  
+   - Sanksi perdata berkaitan dengan pertanggungjawaban atas kerugian yang dialami pasien akibat tindakan malpraktik.  
+   - Tenaga Medis atau Tenaga Kesehatan yang dimintai pertanggungjawaban secara perdata harus terlebih dahulu mendapatkan rekomendasi dari majelis profesi (Pasal 308 ayat (2) dan (4)).  
+   - Rekomendasi ini berupa penilaian apakah pelaksanaan praktik keprofesian sesuai atau tidak dengan standar profesi, pelayanan, dan prosedur operasional (Pasal 308 ayat (6)).  
+   - Sanksi perdata biasanya berupa ganti rugi atau kompensasi kepada pasien atau keluarganya atas kerugian yang dialami.
+
+**Perbedaan utama:**  
+- **Sanksi pidana** bersifat hukuman yang dijatuhkan oleh negara berupa penjara dan/atau denda kepada Tenaga Medis/Kesehatan atas pelanggaran hukum yang mengakibatkan luka berat atau kematian.  
+- **Sanksi perdata** bersifat kompensasi atau ganti rugi yang harus dibayar oleh Tenaga Medis/Kesehatan kepada pasien atau keluarganya akibat kerugian yang timbul dari malpraktik.
+
+Selain itu, proses penanganan keduanya memerlukan rekomendasi dari majelis profesi sebagai syarat administrasi sebelum penyidikan pidana atau gugatan perdata dapat dilanjutkan (Pasal 308 UU No. 17 Tahun 2023).
+
+Demikian penjelasan perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis berdasarkan peraturan yang berlaku.",18705,simple,large,2248,299,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Apa perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis?,hukum,hard,"['pidana', 'perdata', 'malpraktik', 'perbedaan']",1.0,1.0,1.0,1.0
+True,Agent stopped due to max iterations.,68023,multi,small,36,6,7,6,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis?,hukum,hard,"['pidana', 'perdata', 'malpraktik', 'perbedaan']",0.0,0.0,0.036,0.011999999999999999
+True,Agent stopped due to max iterations.,75966,multi,large,36,6,7,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Apa perbedaan sanksi pidana dan perdata dalam kasus malpraktik medis?,hukum,hard,"['pidana', 'perdata', 'malpraktik', 'perbedaan']",0.0,0.0,0.036,0.011999999999999999
+True,"Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 557 sampai dengan Pasal 564, implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia diatur sebagai berikut:
+
+1. **Definisi dan Ruang Lingkup Telemedicine**  
+   Telemedicine atau telekesehatan adalah upaya pelayanan kesehatan yang memanfaatkan teknologi informasi dan komunikasi jarak jauh, meliputi pelayanan klinis (konsultasi klinis dan konsultasi hasil pemeriksaan penunjang) serta pelayanan nonklinis (promotif, preventif, kuratif, rehabilitatif, paliatif, dan sistem informasi serta administrasi kesehatan) (Pasal 557 ayat 1-3).
+
+2. **Penyelenggaraan Telemedicine**  
+   Telemedicine dapat diselenggarakan dalam dua bentuk layanan:  
+   a. Antar-Fasilitas Pelayanan Kesehatan (misalnya antar rumah sakit atau klinik) untuk diagnosis, penatalaksanaan klinis, dan pencegahan penyakit/cedera.  
+   b. Antara Fasilitas Pelayanan Kesehatan dengan masyarakat secara langsung untuk tujuan yang sama (Pasal 558 ayat 1-3).
+
+3. **Pihak Penyelenggara**  
+   Fasilitas Pelayanan Kesehatan yang dapat menyelenggarakan telemedicine meliputi rumah sakit, puskesmas, klinik, praktik mandiri tenaga medis atau tenaga kesehatan, laboratorium kesehatan, dan apotek (Pasal 558 ayat 5).
+
+4. **Persyaratan Penyelenggaraan**  
+   Fasilitas yang menyelenggarakan telemedicine harus memenuhi persyaratan terkait infrastruktur, jenis pelayanan, sumber daya manusia, dan standar klinis (Pasal 558 ayat 6). Selain itu, persyaratan umum penyelenggaraan telekesehatan juga mencakup sumber daya manusia, sarana dan prasarana, peralatan, dan aplikasi (Pasal 557 ayat 4).
+
+5. **Penggunaan Aplikasi dan Sistem Keamanan Data**  
+   Penyelenggaraan telemedicine harus menggunakan perangkat lunak/aplikasi yang mendukung dengan sistem keamanan dan keselamatan data sesuai ketentuan peraturan perundang-undangan. Fasilitas pelayanan kesehatan dapat menggunakan aplikasi mandiri, milik pemerintah, atau swasta. Jika menggunakan aplikasi mandiri, aplikasi tersebut harus teregistrasi di kementerian yang mengurusi bidang kesehatan (Pasal 560 ayat 1-4).
+
+6. **Ketentuan Lebih Lanjut**  
+   Ketentuan teknis dan pelaksanaan lebih lanjut mengenai penyelenggaraan telemedicine akan diatur dengan Peraturan Menteri (Pasal 564).
+
+Dengan demikian, implementasi telemedicine dalam praktik kedokteran di Indonesia diatur secara komprehensif dalam PP No. 28 Tahun 2024, yang mengatur definisi, jenis layanan, pihak penyelenggara, persyaratan teknis dan sumber daya, serta penggunaan aplikasi yang aman dan terdaftar. Hal ini memastikan bahwa telemedicine dapat dijalankan secara legal, aman, dan sesuai standar pelayanan kesehatan di Indonesia.",15356,simple,small,2676,321,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Bagaimana implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia?,teknologi,hard,"['telemedicine', 'teknologi', 'peraturan']",1.0,1.0,1.0,1.0
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 172 dan PP No. 28 Tahun 2024 (berlaku) Pasal 557, 558, dan 564, implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia diatur sebagai berikut:
+
+1. **Definisi dan Ruang Lingkup Telemedicine**  
+   - Telemedicine merupakan bagian dari telekesehatan yang merupakan upaya pelayanan kesehatan menggunakan teknologi informasi dan komunikasi jarak jauh untuk pemberian pelayanan klinis (konsultasi klinis, konsultasi hasil pemeriksaan penunjang) dan nonklinis (promotif, preventif, kuratif, rehabilitatif, paliatif, serta sistem informasi dan administrasi kesehatan) (PP No. 28 Tahun 2024 Pasal 557).  
+   - Pelayanan telemedicine meliputi layanan antar-Fasilitas Pelayanan Kesehatan dan antara Fasilitas Pelayanan Kesehatan dengan masyarakat (UU No. 17 Tahun 2023 Pasal 172 ayat (3); PP No. 28 Tahun 2024 Pasal 558 ayat (1)).
+
+2. **Penyelenggara Telemedicine**  
+   - Fasilitas Pelayanan Kesehatan yang dapat menyelenggarakan telemedicine meliputi rumah sakit, puskesmas, klinik, praktik mandiri tenaga medis atau tenaga kesehatan, laboratorium kesehatan, dan apotek (PP No. 28 Tahun 2024 Pasal 558 ayat (5)).  
+   - Penyelenggaraan telemedicine dapat dilakukan secara mandiri oleh fasilitas pelayanan kesehatan atau bekerja sama dengan penyelenggara sistem elektronik yang terdaftar sesuai ketentuan peraturan perundang-undangan (UU No. 17 Tahun 2023 Pasal 172 ayat (2); PP No. 28 Tahun 2024 Pasal 558 ayat (4)).
+
+3. **Pelaksana Telemedicine**  
+   - Pelayanan telemedicine harus dilakukan oleh tenaga medis atau tenaga kesehatan yang memiliki izin praktik sesuai ketentuan peraturan perundang-undangan (UU No. 17 Tahun 2023 Pasal 172 ayat (4)).
+
+4. **Persyaratan Penyelenggaraan Telemedicine**  
+   - Fasilitas pelayanan kesehatan yang menyelenggarakan telemedicine wajib memenuhi persyaratan infrastruktur, jenis pelayanan, sumber daya manusia, dan standar klinis (PP No. 28 Tahun 2024 Pasal 558 ayat (6)).  
+   - Persyaratan lebih rinci mengenai penyelenggaraan telemedicine dan telekesehatan diatur lebih lanjut dengan Peraturan Menteri (PP No. 28 Tahun 2024 Pasal 564; Pasal 557 ayat (4)).
+
+5. **Regulasi Pelengkap**  
+   - Ketentuan lebih lanjut mengenai penyelenggaraan telemedicine diatur dengan Peraturan Pemerintah dan Peraturan Menteri yang mengatur teknis pelaksanaan dan persyaratan operasional telemedicine (UU No. 17 Tahun 2023 Pasal 172 ayat (5); PP No. 28 Tahun 2024 Pasal 564).
+
+**Kesimpulan:**  
+Implementasi telemedicine di Indonesia diatur secara komprehensif dalam UU No. 17 Tahun 2023 dan PP No. 28 Tahun 2024 yang mengatur ruang lingkup, penyelenggara, pelaksana, dan persyaratan teknis telemedicine. Pelayanan telemedicine harus dilakukan oleh tenaga medis berizin dan fasilitas pelayanan kesehatan yang memenuhi standar, dengan ketentuan teknis lebih lanjut diatur oleh Peraturan Menteri. Hal ini memastikan praktik telemedicine sesuai dengan standar kedokteran dan peraturan kesehatan yang berlaku di Indonesia.",18131,simple,large,3009,398,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Bagaimana implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia?,teknologi,hard,"['telemedicine', 'teknologi', 'peraturan']",1.0,1.0,1.0,1.0
+True,"Implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia diatur secara komprehensif melalui beberapa ketentuan utama sebagai berikut:
+
+1. Penyelenggaraan Telemedicine oleh Fasilitas Pelayanan Kesehatan  
+   Fasilitas Pelayanan Kesehatan dapat memberikan pelayanan telekesehatan dan telemedisin secara mandiri atau bekerja sama dengan penyelenggara sistem elektronik yang terdaftar sesuai ketentuan peraturan perundang-undangan. Pelayanan telemedisin ini meliputi layanan antar-fasilitas pelayanan kesehatan dan antara fasilitas pelayanan kesehatan dengan masyarakat. Pelayanan telemedisin harus dilakukan oleh tenaga medis atau tenaga kesehatan yang memiliki izin praktik (UU No. 17 Tahun 2023 Pasal 172).
+
+2. Jenis Layanan Telemedicine  
+   Telemedicine dapat dilaksanakan dalam dua bentuk utama:  
+   a. Antar-fasilitas pelayanan kesehatan, yang bertujuan untuk menegakkan diagnosis, penatalaksanaan klinis, dan/atau pencegahan penyakit dan cedera.  
+   b. Antara fasilitas pelayanan kesehatan dengan masyarakat, untuk kepentingan diagnosis, penatalaksanaan klinis, dan/atau pencegahan penyakit dan cedera (PP No. 28 Tahun 2024 Pasal 558).
+
+3. Penggunaan Aplikasi dalam Telemedicine  
+   Penyelenggara telekesehatan dan telemedisin dapat menggunakan aplikasi yang dikembangkan secara mandiri atau milik pemerintah/swasta. Aplikasi tersebut harus memenuhi sistem keamanan dan keselamatan data sesuai ketentuan peraturan perundang-undangan dan wajib teregistrasi di kementerian yang menyelenggarakan urusan kesehatan jika dikembangkan secara mandiri (PP No. 28 Tahun 2024 Pasal 555).
+
+4. Persyaratan Penyelenggaraan Telekesehatan  
+   Telekesehatan sebagai bagian dari pelayanan kesehatan yang memanfaatkan teknologi informasi dan komunikasi jarak jauh mencakup pelayanan klinis (konsultasi klinis dan konsultasi hasil pemeriksaan penunjang) dan nonklinis (promotif, preventif, kuratif, rehabilitatif, paliatif, serta sistem informasi dan administrasi kesehatan). Penyelenggaraan telekesehatan harus memenuhi persyaratan sumber daya manusia, sarana dan prasarana, peralatan, dan aplikasi, yang ketentuannya diatur lebih lanjut dengan Peraturan Menteri (PP No. 28 Tahun 2024 Pasal 557).
+
+5. Regulasi Lanjutan  
+   Ketentuan lebih lanjut mengenai penyelenggaraan telemedisin diatur dengan Peraturan Pemerintah, yang mengatur secara rinci tata cara dan standar pelaksanaan telemedicine dalam praktik kedokteran (UU No. 17 Tahun 2023 Pasal 172).
+
+Kesimpulannya, implementasi telemedicine di Indonesia dalam praktik kedokteran harus dilakukan oleh tenaga medis berizin, menggunakan aplikasi yang aman dan terdaftar, dengan layanan yang dapat dilakukan antar fasilitas kesehatan maupun langsung ke masyarakat, serta memenuhi persyaratan teknis dan administratif yang diatur secara hukum.
+
+Sumber:
+- UU No. 17 Tahun 2023 Pasal 172
+- PP No. 28 Tahun 2024 Pasal 555, 557, dan 558",80308,multi,small,2895,353,5,3,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia?,teknologi,hard,"['telemedicine', 'teknologi', 'peraturan']",1.0,0.8,1.0,0.9333333333333332
+True,"Implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia diatur secara komprehensif dalam UU No. 17 Tahun 2023 dan PP No. 28 Tahun 2024, dengan ketentuan sebagai berikut:
+
+1. Penyelenggaraan Telemedicine oleh Fasilitas Pelayanan Kesehatan  
+   Fasilitas Pelayanan Kesehatan dapat memberikan pelayanan telemedicine baik secara mandiri maupun bekerja sama dengan penyelenggara sistem elektronik yang terdaftar sesuai ketentuan peraturan perundang-undangan. Pelayanan telemedicine ini meliputi layanan antar-fasilitas pelayanan kesehatan dan layanan antara fasilitas pelayanan kesehatan dengan masyarakat. Pelayanan telemedicine harus dilakukan oleh tenaga medis atau tenaga kesehatan yang memiliki izin praktik.
+
+2. Ruang Lingkup Layanan Telemedicine  
+   Telemedicine dilaksanakan untuk menegakkan diagnosis, penatalaksanaan klinis, dan/atau pencegahan penyakit dan cedera. Layanan ini dapat berupa konsultasi klinis dan konsultasi hasil pemeriksaan penunjang (pelayanan klinis), serta pelayanan nonklinis seperti promotif, preventif, kuratif, rehabilitatif, dan paliatif.
+
+3. Penggunaan Aplikasi Telemedicine  
+   Penyelenggara telekesehatan dan telemedicine dapat menggunakan aplikasi yang dikembangkan secara mandiri atau aplikasi milik pemerintah/swasta. Aplikasi yang dikembangkan secara mandiri wajib teregistrasi di kementerian yang menyelenggarakan urusan pemerintahan di bidang kesehatan dan harus memenuhi sistem keamanan dan keselamatan data sesuai ketentuan peraturan perundang-undangan.
+
+4. Persyaratan Penyelenggaraan Telemedicine  
+   Persyaratan penyelenggaraan telemedicine meliputi sumber daya manusia, sarana dan prasarana, peralatan, dan aplikasi yang digunakan. Ketentuan lebih lanjut mengenai persyaratan ini diatur oleh Peraturan Menteri.
+
+5. Keamanan Data dan Regulasi  
+   Sistem telemedicine harus menjamin keamanan dan keselamatan data pasien sesuai dengan ketentuan peraturan perundang-undangan yang berlaku, sehingga menjaga kerahasiaan dan integritas informasi kesehatan.
+
+6. Pengaturan Lebih Lanjut  
+   Ketentuan lebih lanjut mengenai penyelenggaraan pelayanan telemedicine diatur dengan Peraturan Pemerintah, yang memberikan landasan hukum operasional dan teknis pelaksanaan telemedicine dalam praktik kedokteran.
+
+Dengan demikian, implementasi telemedicine di Indonesia mengedepankan aspek legalitas tenaga kesehatan, keamanan data, penggunaan aplikasi yang terdaftar, serta cakupan layanan yang meliputi diagnosis dan penatalaksanaan klinis, sesuai dengan regulasi yang berlaku.
+
+(Sumber: PP No. 28 Tahun 2024 Pasal 555, 557, 558; UU No. 17 Tahun 2023 Pasal 172)",94922,multi,large,2621,307,5,3,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana implementasi telemedicine dalam konteks peraturan praktik kedokteran di Indonesia?,teknologi,hard,"['telemedicine', 'teknologi', 'peraturan']",0.6666666666666666,0.8,0.8333333333333333,0.7666666666666666
+True,"Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 723, UU No. 17 Tahun 2023 (berlaku) Pasal 3 dan Pasal 302, serta PP No. 32 Tahun 1996 (berlaku) Pasal 24, berikut adalah analisis komprehensif mengenai perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional Indonesia:
+
+1. **Perlindungan Hukum bagi Tenaga Kesehatan**
+
+   - **Pemberian Perlindungan oleh Pemerintah dan Fasilitas Pelayanan Kesehatan**  
+     PP No. 28 Tahun 2024 Pasal 723 ayat (1) menegaskan bahwa pelindungan hukum bagi tenaga medis dan tenaga kesehatan diberikan oleh Pemerintah Pusat, Pemerintah Daerah, dan pimpinan fasilitas pelayanan kesehatan. Perlindungan ini mencakup dua aspek utama:  
+     a. Pencegahan pelanggaran oleh tenaga kesehatan melalui penerapan standar profesi, standar pelayanan, standar prosedur operasional, serta memastikan tenaga kesehatan memiliki Surat Tanda Registrasi (STR) dan Surat Izin Praktik (SIP).  
+     b. Perlindungan hukum bagi tenaga kesehatan yang menghadapi permasalahan hukum terkait pelaksanaan tugasnya.
+
+   - **Bentuk Perlindungan Pencegahan Pelanggaran**  
+     PP No. 28 Tahun 2024 Pasal 723 ayat (2) mengatur bentuk perlindungan pencegahan pelanggaran, antara lain:  
+     - Penetapan standar profesi dan prosedur operasional yang harus dipatuhi.  
+     - Kepastian tenaga kesehatan memiliki STR dan SIP yang sah.  
+     - Praktik keprofesian sesuai kewenangan klinis.  
+     - Persetujuan tindakan medis dari pasien atau keluarga, kecuali dalam keadaan kegawatdaruratan.  
+     - Fasilitasi manfaat pelindungan tanggung gugat profesi.
+
+   - **Bantuan Hukum dan Penyelesaian Sengketa**  
+     Pasal 723 ayat (3) dan (4) PP No. 28 Tahun 2024 mengatur bahwa tenaga kesehatan berhak mendapatkan bantuan hukum berupa konsultasi hukum dan pendampingan dalam penyelesaian sengketa, termasuk penegakan etika profesi, disiplin keilmuan, dan hukum. Instansi tempat tenaga kesehatan bekerja wajib memberikan perlindungan dan bantuan hukum tersebut.
+
+   - **Perlindungan Hukum dalam Pelaporan Tindak Pidana**  
+     UU No. 17 Tahun 2023 Pasal 302 memberikan hak dan perlindungan hukum kepada tenaga medis dan tenaga kesehatan yang melaporkan dugaan tindak pidana pada pasien yang diberi pelayanan kesehatan. Hal ini juga mengatur pengecualian rahasia kesehatan dalam konteks pelaporan tersebut.
+
+   - **Perlindungan Berdasarkan Standar Profesi**  
+     PP No. 32 Tahun 1996 Pasal 24 menegaskan bahwa perlindungan hukum diberikan kepada tenaga kesehatan yang menjalankan tugas sesuai standar profesi yang berlaku.
+
+2. **Perlindungan Hukum bagi Pasien**
+
+   - **Hak Mendapatkan Informasi Lengkap dan Benar**  
+     PP No. 28 Tahun 2024 Pasal 724 (meskipun tidak seluruhnya tercantum dalam dokumen) mengatur hak pasien untuk memperoleh informasi yang lengkap dan benar mengenai data diri, riwayat penyakit, tindakan medis, dan pembiayaan kesehatan. Hal ini merupakan bagian dari perlindungan hukum pasien agar dapat membuat keputusan yang tepat terkait pelayanan kesehatan.
+
+   - **Pelindungan dan Kepastian Hukum bagi Pasien**  
+     UU No. 17 Tahun 2023 Pasal 3 huruf h menyatakan bahwa salah satu tujuan penyelenggaraan kesehatan adalah memberikan pelindungan dan kepastian hukum bagi pasien, sumber daya manusia kesehatan, dan masyarakat secara umum.
+
+3. **Prinsip-Prinsip Perlindungan Hukum dalam Sistem Kesehatan**
+
+   - Perlindungan hukum bersifat preventif dan represif, yaitu mencegah pelanggaran melalui standar dan regulasi serta memberikan bantuan hukum jika terjadi sengketa atau masalah hukum.  
+   - Perlindungan hukum mencakup aspek administratif, etik, dan hukum pidana.  
+   - Kewajiban instansi kesehatan untuk memberikan bantuan hukum dan pendampingan kepada tenaga kesehatan.  
+   - Hak pasien untuk mendapatkan informasi yang transparan dan lengkap sebagai bagian dari perlindungan hukum.
+
+4. **Kewenangan dan Regulasi Pelaksanaan**
+
+   - Ketentuan lebih lanjut mengenai pelindungan hukum bagi tenaga medis dan tenaga kesehatan diatur dengan Peraturan Menteri sesuai PP No. 28 Tahun 2024 Pasal 723 ayat (5).  
+   - Pelaksanaan perlindungan hukum bagi tenaga kesehatan sesuai standar profesi diatur lebih lanjut oleh Menteri berdasarkan PP No. 32 Tahun 1996 Pasal 24 ayat (2).
+
+**Kesimpulan:**  
+Sistem kesehatan nasional Indonesia memberikan perlindungan hukum yang komprehensif bagi tenaga kesehatan dan pasien. Perlindungan bagi tenaga kesehatan meliputi pencegahan pelanggaran melalui standar profesi dan prosedur, serta bantuan hukum dalam menghadapi masalah hukum. Sementara itu, pasien dilindungi melalui hak memperoleh informasi yang lengkap dan kepastian hukum dalam pelayanan kesehatan. Regulasi ini diatur secara hierarkis dan terintegrasi dalam peraturan perundang-undangan yang berlaku, dengan peran aktif pemerintah pusat, daerah, dan fasilitas pelayanan kesehatan dalam pelaksanaannya.",26669,simple,small,4852,634,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Analisis komprehensif tentang perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional,komprehensif,very_hard,"['perlindungan hukum', 'pasien', 'tenaga kesehatan', 'sistem kesehatan']",1.0,1.0,1.0,1.0
+True,"Berdasarkan UU No. 17 Tahun 2023 (berlaku) Pasal 302, serta PP No. 28 Tahun 2024 (berlaku) Pasal 721, 723, dan 735, berikut adalah analisis komprehensif mengenai perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional Indonesia:
+
+1. **Perlindungan Hukum bagi Tenaga Medis dan Tenaga Kesehatan**
+
+   - **Hak atas Perlindungan Hukum**  
+     PP No. 28 Tahun 2024 Pasal 721 ayat (1) huruf a menegaskan bahwa tenaga medis dan tenaga kesehatan berhak mendapatkan pelindungan hukum sepanjang melaksanakan tugas sesuai dengan standar profesi, standar pelayanan, standar prosedur operasional, dan etika profesi serta kebutuhan kesehatan pasien.  
+     Selanjutnya, Pasal 723 ayat (1) menyatakan bahwa pelindungan hukum ini diberikan oleh Pemerintah Pusat, Pemerintah Daerah, dan pimpinan fasilitas pelayanan kesehatan. Bentuk pelindungan hukum meliputi pencegahan pelanggaran dan bantuan hukum saat menghadapi permasalahan hukum (Pasal 723 ayat (1) dan (3)).
+
+   - **Bentuk Pelindungan Hukum**  
+     Pencegahan pelanggaran dilakukan melalui penerapan standar profesi, standar pelayanan, standar prosedur operasional, serta memastikan tenaga medis memiliki Surat Tanda Registrasi (STR) dan Surat Izin Praktik (SIP) (Pasal 723 ayat (2)).  
+     Selain itu, tenaga medis berhak mendapatkan konsultasi hukum dan pendampingan dalam penyelesaian sengketa (Pasal 723 ayat (4)).
+
+   - **Pelindungan Hukum dalam Pelaporan Tindak Pidana**  
+     UU No. 17 Tahun 2023 Pasal 302 memberikan hak dan pelindungan hukum kepada tenaga medis dan tenaga kesehatan yang melaporkan dugaan tindak pidana pada pasien yang diberi pelayanan kesehatan, termasuk pengecualian dari kewajiban menjaga rahasia kesehatan dalam konteks pelaporan tersebut.
+
+   - **Kewajiban dan Standar Praktik**  
+     PP No. 28 Tahun 2024 Pasal 735 mengatur kewajiban tenaga medis untuk memberikan pelayanan sesuai standar profesi dan etika, memperoleh persetujuan pasien, menjaga rahasia kesehatan, membuat dokumentasi, dan merujuk pasien sesuai kompetensi. Kewajiban ini menjadi dasar pelindungan hukum selama tenaga medis menjalankan praktik sesuai ketentuan tersebut.
+
+2. **Perlindungan Hukum bagi Pasien**
+
+   - **Hak Pasien atas Informasi**  
+     PP No. 28 Tahun 2024 Pasal 721 ayat (1) huruf b menyatakan tenaga medis berhak mendapatkan informasi lengkap dan benar dari pasien atau keluarganya, yang secara implisit juga menjamin hak pasien untuk memberikan informasi yang akurat demi pelayanan yang tepat.
+
+   - **Rahasia Kesehatan Pasien**  
+     Pasal 735 ayat (1) huruf c menegaskan kewajiban tenaga medis menjaga rahasia kesehatan pasien, dengan pengecualian tertentu yang diatur secara ketat (ayat (2)), sehingga memberikan perlindungan privasi pasien dalam pelayanan kesehatan.
+
+   - **Persetujuan Tindakan Medis**  
+     Pasal 735 ayat (1) huruf b mengatur kewajiban tenaga medis memperoleh persetujuan dari pasien atau keluarganya sebelum tindakan medis dilakukan, yang merupakan bagian dari perlindungan hak pasien untuk menentukan tindakan yang diterimanya.
+
+3. **Perlindungan Keselamatan dan Hak Tenaga Medis**
+
+   - PP No. 28 Tahun 2024 Pasal 721 ayat (1) huruf d dan e menegaskan hak tenaga medis mendapatkan pelindungan atas keselamatan, kesehatan kerja, keamanan, jaminan kesehatan, dan jaminan ketenagakerjaan sesuai peraturan perundang-undangan.
+
+   - Selain itu, tenaga medis berhak menolak permintaan pasien atau pihak lain yang bertentangan dengan standar profesi dan kode etik (Pasal 721 ayat (1) huruf i), yang juga merupakan bentuk perlindungan hukum terhadap praktik yang tidak sesuai.
+
+4. **Peran Pemerintah dan Fasilitas Pelayanan Kesehatan**
+
+   - Pemerintah dan pimpinan fasilitas pelayanan kesehatan bertanggung jawab memberikan pelindungan hukum preventif dan represif kepada tenaga medis dan tenaga kesehatan (Pasal 723 ayat (1)).
+
+   - Pemerintah juga mengatur pelindungan hukum lebih lanjut melalui peraturan menteri (Pasal 723 ayat (5)).
+
+**Kesimpulan:**  
+Perlindungan hukum dalam sistem kesehatan nasional Indonesia diatur secara komprehensif melalui UU No. 17 Tahun 2023 dan PP No. 28 Tahun 2024 yang memberikan hak dan kewajiban bagi tenaga medis dan pasien. Tenaga medis mendapatkan pelindungan hukum dalam menjalankan praktik sesuai standar profesi dan etika, termasuk pelindungan saat melaporkan tindak pidana. Pasien dilindungi melalui hak atas informasi, persetujuan tindakan, dan kerahasiaan data kesehatan. Pemerintah dan fasilitas pelayanan kesehatan memiliki peran penting dalam memberikan pelindungan hukum preventif dan represif guna menjamin kelancaran dan keamanan pelayanan kesehatan.
+
+Jika Anda memerlukan penjelasan lebih rinci mengenai aspek tertentu, silakan ajukan pertanyaan lanjutan.",24691,simple,large,4725,626,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Analisis komprehensif tentang perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional,komprehensif,very_hard,"['perlindungan hukum', 'pasien', 'tenaga kesehatan', 'sistem kesehatan']",1.0,1.0,1.0,1.0
+True,Agent stopped due to max iterations.,77651,multi,small,36,6,7,6,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Analisis komprehensif tentang perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional,komprehensif,very_hard,"['perlindungan hukum', 'pasien', 'tenaga kesehatan', 'sistem kesehatan']",0.0,0.0,0.036,0.011999999999999999
+True,Agent stopped due to max iterations.,76421,multi,large,36,6,6,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Analisis komprehensif tentang perlindungan hukum bagi pasien dan tenaga kesehatan dalam sistem kesehatan nasional,komprehensif,very_hard,"['perlindungan hukum', 'pasien', 'tenaga kesehatan', 'sistem kesehatan']",0.0,0.0,0.036,0.011999999999999999
+True,"Berdasarkan PP No. 28 Tahun 2024 (berlaku) Pasal 1149, PP No. 7 Tahun 1987 (berlaku) Pasal 21 dan Pasal 13, serta mempertimbangkan konteks otonomi daerah, koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah dapat dijelaskan sebagai berikut:
+
+1. **Pengawasan Terpadu oleh Pemerintah Pusat dan Daerah**  
+   - Pengawasan penyelenggaraan kesehatan, termasuk praktik kedokteran, dilakukan oleh Menteri Kesehatan, gubernur, dan bupati/walikota sesuai kewenangannya (PP No. 28 Tahun 2024 Pasal 1149 ayat (4)).  
+   - Pemerintah daerah, melalui Dinas Kesehatan yang dibentuk sesuai PP No. 7 Tahun 1987 Pasal 13, bertanggung jawab melaksanakan pengawasan di wilayahnya masing-masing dengan mengacu pada petunjuk dari Menteri Kesehatan (PP No. 7 Tahun 1987 Pasal 21).
+
+2. **Pelibatan Berbagai Pihak dalam Pengawasan**  
+   - Pengawasan dapat melibatkan tenaga pengawas bidang kesehatan yang diangkat oleh Menteri, gubernur, atau bupati/walikota (PP No. 28 Tahun 2024 Pasal 1149 ayat (5)).  
+   - Selain itu, pengawasan dapat melibatkan Konsil Kedokteran, Kolegium, majelis disiplin profesi, organisasi profesi, organisasi kemasyarakatan terkait, akademisi, dan pakar (PP No. 28 Tahun 2024 Pasal 1149 ayat (6)).  
+   - Masyarakat juga dapat dilibatkan dalam pengawasan sebagai bagian dari mekanisme kontrol sosial (PP No. 28 Tahun 2024 Pasal 1149 ayat (7)).
+
+3. **Koordinasi dan Sinergi Antar Lembaga**  
+   - Menteri, gubernur, dan bupati/walikota melakukan koordinasi dalam pengawasan praktik kedokteran agar pengawasan berjalan efektif dan sesuai dengan ketentuan perundang-undangan (PP No. 28 Tahun 2024 Pasal 1149 ayat (1) dan (2)).  
+   - Pengawasan dilakukan dengan berbagai metode seperti pemantauan, evaluasi, pemeriksaan, reviu, dan audit (PP No. 28 Tahun 2024 Pasal 1149 ayat (3)).  
+   - Dalam pelaksanaan pengawasan, dapat diikutsertakan organisasi profesi dan asosiasi bidang kesehatan yang terkait untuk memperkuat koordinasi dan kualitas pengawasan (merujuk pada PP No. 61 Tahun 2014 Pasal 50 ayat (2) yang dicabut, namun prinsip pelibatan organisasi profesi tetap relevan dan diperkuat dalam PP No. 28 Tahun 2024).
+
+4. **Penyesuaian dengan Otonomi Daerah**  
+   - Pemerintah daerah memiliki kewenangan untuk mengadakan pengawasan atas penyelenggaraan kesehatan di wilayahnya sesuai dengan petunjuk dari Menteri Kesehatan, sehingga pengawasan dapat disesuaikan dengan kondisi dan kebutuhan daerah masing-masing (PP No. 7 Tahun 1987 Pasal 21).  
+   - Pembentukan Dinas Kesehatan dan unit pelaksana teknis di daerah mendukung pelaksanaan pengawasan yang efektif dan efisien (PP No. 7 Tahun 1987 Pasal 13).
+
+**Kesimpulan:**  
+Koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah dilakukan melalui sinergi antara pemerintah pusat (Menteri Kesehatan) dan pemerintah daerah (gubernur, bupati/walikota) yang dibantu oleh Dinas Kesehatan daerah dan tenaga pengawas bidang kesehatan. Pengawasan ini melibatkan berbagai pihak termasuk organisasi profesi, pakar, dan masyarakat untuk memastikan praktik kedokteran berjalan sesuai standar profesi, etika, dan peraturan perundang-undangan yang berlaku. Mekanisme pengawasan dilakukan secara terpadu dengan metode pemantauan, evaluasi, pemeriksaan, dan audit yang disesuaikan dengan kewenangan dan kondisi daerah.",18712,simple,small,3316,443,4,1,"{'model': 'text-embedding-3-small', 'table': 'documents_small', 'dimensions': 1536}",Bagaimana koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah?,koordinasi,very_hard,"['koordinasi', 'pengawasan', 'otonomi daerah']",1.0,1.0,1.0,1.0
+True,"Berdasarkan UU No. 17 Tahun 2023 Pasal 421 (berlaku) dan PP No. 28 Tahun 2024 Pasal 1149 (berlaku), koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah dilakukan dengan mekanisme sebagai berikut:
+
+1. **Peran Pemerintah Pusat dan Pemerintah Daerah**  
+   - Pemerintah Pusat dan Pemerintah Daerah secara bersama-sama melakukan pengawasan terhadap penyelenggaraan pelayanan kesehatan, termasuk praktik kedokteran (UU No. 17 Tahun 2023 Pasal 421 ayat (1)).  
+   - Pengawasan ini meliputi ketaatan terhadap peraturan perundang-undangan, standar profesi, standar pelayanan, etika dan disiplin profesi, serta evaluasi dampak pelayanan kesehatan oleh tenaga medis (Pasal 421 ayat (2) huruf a, b, dan c).  
+   - Pengawasan dapat melibatkan masyarakat untuk meningkatkan transparansi dan akuntabilitas (Pasal 421 ayat (3)).
+
+2. **Koordinasi Berkala dan Berkelanjutan**  
+   - Pemerintah Pusat dan Pemerintah Daerah wajib melakukan koordinasi secara berkala dan berkelanjutan dalam pelaksanaan pengawasan pelayanan kesehatan, termasuk pelayanan kesehatan tradisional yang relevan dengan praktik kedokteran (PP No. 28 Tahun 2024 Pasal 493 ayat (1)).  
+   - Koordinasi ini bertujuan untuk menjamin ketersediaan, mutu, dan kepatuhan terhadap norma, standar, prosedur, dan kriteria yang telah ditetapkan oleh Pemerintah Pusat.
+
+3. **Pelaksanaan Pengawasan dan Pembinaan**  
+   - Pengawasan dilakukan melalui berbagai metode seperti pemantauan, evaluasi, pemeriksaan, reviu atau audit, dan bentuk pengawasan lainnya (PP No. 28 Tahun 2024 Pasal 1149 ayat (3)).  
+   - Menteri, gubernur, atau bupati/wali kota dapat dibantu oleh tenaga pengawas bidang kesehatan yang diangkat oleh masing-masing pejabat tersebut untuk melaksanakan pengawasan (Pasal 1149 ayat (4) dan (5)).  
+   - Pengawasan dapat melibatkan berbagai pihak seperti konsil profesi, majelis disiplin profesi, organisasi profesi, akademisi, dan pakar untuk memastikan pengawasan yang komprehensif dan profesional (Pasal 1149 ayat (6)).
+
+4. **Pengawasan Kendali Mutu dan Biaya**  
+   - Setiap tenaga medis wajib melaksanakan kendali mutu dan kendali biaya dalam pelayanan kesehatan, yang menjadi tanggung jawab fasilitas pelayanan kesehatan (UU No. 17 Tahun 2023 Pasal 303 ayat (1) dan (3)).  
+   - Pemerintah Pusat dan Daerah bertanggung jawab melakukan pembinaan dan pengawasan terhadap pelaksanaan kendali mutu dan biaya tersebut (Pasal 303 ayat (4)).
+
+Dengan demikian, koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah dilakukan melalui sinergi antara Pemerintah Pusat dan Pemerintah Daerah secara berkala dan berkelanjutan, melibatkan tenaga pengawas dan berbagai organisasi profesi, serta mengikutsertakan masyarakat untuk memastikan pelaksanaan pengawasan yang efektif, akuntabel, dan sesuai dengan standar yang berlaku.",21784,simple,large,2835,373,4,1,"{'model': 'text-embedding-3-large', 'table': 'documents', 'dimensions': 3072}",Bagaimana koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah?,koordinasi,very_hard,"['koordinasi', 'pengawasan', 'otonomi daerah']",1.0,1.0,1.0,1.0
+True,Agent stopped due to max iterations.,112816,multi,small,36,6,7,6,"{'model': 'small', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah?,koordinasi,very_hard,"['koordinasi', 'pengawasan', 'otonomi daerah']",0.0,0.0,0.036,0.011999999999999999
+True,Agent stopped due to max iterations.,64108,multi,large,36,6,6,6,"{'model': 'large', 'parallel_execution': False, 'cached': False, 'modular_architecture': True, 'version': '2.0.0'}",Bagaimana koordinasi antar lembaga dalam pengawasan praktik kedokteran di era otonomi daerah?,koordinasi,very_hard,"['koordinasi', 'pengawasan', 'otonomi daerah']",0.0,0.0,0.036,0.011999999999999999

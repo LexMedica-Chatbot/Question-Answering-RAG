@@ -14,12 +14,22 @@ from ..tools import (
     generate_answer,
     request_new_query,
 )
+from ..tools.query_rewriting_tools import (
+    rewrite_query_with_history,
+    analyze_query_context_dependency,
+    smart_query_preprocessing,
+    smart_query_preprocessing_with_history,
+)
+
 
 def create_agent_tools():
     """
     Create tools list for the agent
     """
     return [
+        smart_query_preprocessing,  # NEW: Smart query preprocessing with history
+        smart_query_preprocessing_with_history,  # NEW: Smart query preprocessing with explicit history
+        rewrite_query_with_history,  # NEW: Query rewriting tool
         search_documents,
         refine_query,
         evaluate_documents,
@@ -27,11 +37,14 @@ def create_agent_tools():
         request_new_query,
     ]
 
-def create_enhanced_agent_executor(tools: List, model_config: Dict[str, Any]) -> AgentExecutor:
+
+def create_enhanced_agent_executor(
+    tools: List, model_config: Dict[str, Any]
+) -> AgentExecutor:
     """
     Create enhanced agent executor dengan konfigurasi khusus untuk multi-step RAG
     """
-    
+
     # Enhanced system prompt dengan instruksi yang lebih spesifik
     system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan Enhanced Multi-Step RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
 
@@ -85,30 +98,35 @@ LARANGAN:
 Jawab dengan profesional dalam Bahasa Indonesia, gunakan sitasi yang akurat, dan pastikan menjawab pertanyaan secara langsung."""
 
     # Create the chat prompt
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
-    
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("system", "{history_summary}"),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+    )
+
     # Create the ChatOpenAI model
     llm = ChatOpenAI(**model_config)
-    
+
     # Create the agent
     agent = create_openai_tools_agent(llm, tools, prompt)
-    
+
     # Create and return the agent executor
     agent_executor = AgentExecutor(
-        agent=agent, 
-        tools=tools, 
+        agent=agent,
+        tools=tools,
         verbose=True,
         max_iterations=10,
         early_stopping_method="generate",
         handle_parsing_errors=True,
-        return_intermediate_steps=True
+        return_intermediate_steps=True,
     )
-    
+
     return agent_executor
+
 
 def get_agent_executor():
     """
@@ -116,45 +134,63 @@ def get_agent_executor():
     """
     try:
         print("✅ Initializing RAG agent...")
-        
+
         # Initialize LLM
         llm = ChatOpenAI(**MODELS["MAIN"])
-        
+
         # Create tools list
         tools = create_agent_tools()
-        
+
         # Create system prompt for agent
         system_prompt = """Anda adalah asisten hukum kesehatan Indonesia. Tugas Anda adalah menjawab pertanyaan dengan menggunakan tools yang tersedia.
 
-WORKFLOW SEDERHANA:
-1. 🔍 SEARCH: Gunakan search_documents untuk mencari dokumen relevan
-2. 📊 EVALUATE: Gunakan evaluate_documents untuk menilai kualitas dokumen
-3. ✨ GENERATE: Gunakan generate_answer untuk membuat jawaban final
+WORKFLOW ENHANCED DENGAN QUERY REWRITING:
+1. 🧠 PREPROCESS: Gunakan smart_query_preprocessing_with_history untuk menganalisis dan memperbaiki query berdasarkan history_summary
+2. 🔍 SEARCH: Gunakan search_documents dengan query yang sudah diproses
+3. 📊 EVALUATE: Gunakan evaluate_documents untuk menilai kualitas dokumen
+4. ✨ GENERATE: Gunakan generate_answer untuk membuat jawaban final
 
 ATURAN PENTING:
+- SELALU mulai dengan smart_query_preprocessing_with_history jika ada history_summary
+- Gunakan processed_query dari preprocessing untuk search_documents
 - Jika evaluasi menunjukkan "MEMADAI", langsung generate jawaban
 - Jika evaluasi menunjukkan "KURANG MEMADAI", coba refine_query SEKALI saja, lalu search lagi, lalu generate
 - JANGAN melakukan evaluasi berulang-ulang
 - SELALU akhiri dengan generate_answer
 
 INSTRUKSI DATA PASSING:
+- Saat memanggil smart_query_preprocessing_with_history: sertakan current_query dan history_summary
+- Saat memanggil search_documents: gunakan processed_query dari preprocessing
 - Saat memanggil generate_answer: WAJIB sertakan parameter 'documents', 'query', dan 'evaluation_result'
 - Format: generate_answer(documents=hasil_search, query=query_asli, evaluation_result=hasil_evaluasi)
+
+CONTOH WORKFLOW:
+1. preprocessing_result = smart_query_preprocessing_with_history(current_query="Jadi boleh/engga?", history_summary="{history_summary}", previous_responses={previous_responses})
+2. search_result = search_documents(query=preprocessing_result['processed_query'])
+3. evaluation = evaluate_documents(documents=search_result, query=preprocessing_result['processed_query'])
+4. answer = generate_answer(documents=search_result, query=preprocessing_result['original_query'], evaluation_result=evaluation)
+
+PENTING: 
+- Gunakan {history_summary} dan {previous_responses} yang tersedia dalam context
+- previous_responses berisi array 3 string dengan format "Question: X\nAnswer: Y"
 
 Jawab dalam Bahasa Indonesia dengan sitasi yang akurat."""
 
         # Create prompt template
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            ("system", "{history_summary}"),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
-        
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                ("system", "History Summary: {history_summary}"),
+                ("system", "Previous Responses: {previous_responses}"),
+                MessagesPlaceholder(variable_name="chat_history"),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ]
+        )
+
         # Create OpenAI tools agent
         agent = create_openai_tools_agent(llm, tools, prompt)
-        
+
         # Create agent executor
         agent_executor = AgentExecutor(
             agent=agent,
@@ -165,10 +201,10 @@ Jawab dalam Bahasa Indonesia dengan sitasi yang akurat."""
             max_execution_time=120,
             max_iterations=6,
         )
-        
+
         print("✅ RAG agent initialized successfully")
         return agent_executor
-        
+
     except Exception as agent_error:
         print(f"⚠️ Agent initialization issue: {agent_error}")
-        return None 
+        return None

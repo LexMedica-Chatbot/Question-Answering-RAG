@@ -9,7 +9,7 @@ import os
 import time
 import secrets
 import asyncio
-from typing import List, Any
+from typing import List, Any, Dict
 from dotenv import load_dotenv
 
 # FastAPI imports
@@ -29,15 +29,17 @@ from langchain.memory import ConversationBufferMemory
 from .models import MultiStepRAGRequest, MultiStepRAGResponse, StepInfo
 from .utils import EMBEDDING_CONFIG, MODELS, pairs_to_str, summarize_pairs
 from .tools import (
-    search_documents, 
-    enhanced_search_documents, 
-    refine_query, 
-    evaluate_documents, 
-    generate_answer, 
+    search_documents,
+    enhanced_search_documents,
+    refine_query,
+    evaluate_documents,
+    generate_answer,
     request_new_query,
-    parallel_search_documents
+    parallel_search_documents,
 )
 from .executors import get_agent_executor, create_agent_tools
+from .utils.history_utils import summarize_pairs
+from .tools.query_rewriting_tools import smart_query_preprocessing_with_history
 
 # Load environment variables
 load_dotenv()
@@ -45,14 +47,15 @@ load_dotenv()
 # Modern RAG Observability & Caching
 try:
     import sys
+
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    from observability.rag_tracker import (
-        rag_tracker, APIType, ExecutionMode
-    )
+    from observability.rag_tracker import rag_tracker, APIType, ExecutionMode
     from cache.smart_cache import cache_system
-    
+
     LANGFUSE_ENABLED = rag_tracker.enabled
-    print(f"✅ RAG Tracker (Multi-Step): {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
+    print(
+        f"✅ RAG Tracker (Multi-Step): {'enabled' if LANGFUSE_ENABLED else 'disabled'}"
+    )
     print(f"✅ Smart Cache: enabled")
 except ImportError as e:
     print(f"⚠️  RAG Observability not available: {e}")
@@ -68,8 +71,7 @@ async def verify_api_key(api_key_header: str = Depends(api_key_header)):
     """Security dependency - verifikasi API key"""
     if api_key_header != API_KEY:
         raise HTTPException(
-            status_code=HTTP_403_FORBIDDEN, 
-            detail="Akses ditolak: API key tidak valid"
+            status_code=HTTP_403_FORBIDDEN, detail="Akses ditolak: API key tidak valid"
         )
     return api_key_header
 
@@ -88,14 +90,13 @@ print("  ✅ Tools: search_documents, refine_query, evaluate_documents, generate
 print("  ✅ Utils: EMBEDDING_CONFIG, MODELS, document_processor, vector_store_manager")
 print("  ✅ Architecture: Separated concerns dengan clean imports")
 
+
 # Add error handling
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     print(f"❌ Unhandled exception: {str(exc)}")
-    return HTTPException(
-        status_code=500, 
-        detail=f"Internal server error: {str(exc)}"
-    )
+    return HTTPException(status_code=500, detail=f"Internal server error: {str(exc)}")
+
 
 # Global variables untuk agent executor
 agent_executor = None
@@ -105,28 +106,29 @@ agent_executor = None
 async def startup_event():
     """Initialize system components on startup"""
     global agent_executor, parallel_executor, standard_executor
-    
+
     try:
         print("🚀 Starting LexMedica Chatbot Multi-Agent RAG API (Modular)...")
         print(f"✅ FastAPI initialized successfully")
-        
+
         # Test environment variables
         required_env_vars = ["SUPABASE_URL", "SUPABASE_SERVICE_KEY", "OPENAI_API_KEY"]
         missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
-        
+
         if missing_vars:
             print(f"⚠️ Missing environment variables: {missing_vars}")
         else:
             print("✅ All required environment variables found")
-            
+
         # Test database connection
         try:
             from .utils.vector_store_manager import supabase
+
             result = supabase.table("documents").select("*").limit(1).execute()
             print("✅ Database connection successful")
         except Exception as db_error:
             print(f"⚠️ Database connection issue: {db_error}")
-        
+
         # Initialize agent executor using modular function
         try:
             agent_executor = get_agent_executor()
@@ -137,9 +139,9 @@ async def startup_event():
         except Exception as agent_error:
             print(f"⚠️ Agent initialization issue: {agent_error}")
             agent_executor = None
-            
+
         print("✅ Startup completed successfully")
-        
+
     except Exception as e:
         print(f"❌ Startup error: {str(e)}")
 
@@ -147,7 +149,9 @@ async def startup_event():
 # Add CORS middleware
 backend_url = os.environ.get("BACKEND_URL", "*")
 frontend_url = os.environ.get("FRONTEND_URL", "*")
-allowed_origins = ["*"] if not backend_url or backend_url == "*" else [backend_url, frontend_url]
+allowed_origins = (
+    ["*"] if not backend_url or backend_url == "*" else [backend_url, frontend_url]
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -160,6 +164,7 @@ app.add_middleware(
 
 # ======================= MAIN API ENDPOINTS =======================
 
+
 @app.post(
     "/api/chat",
     response_model=MultiStepRAGResponse,
@@ -170,20 +175,44 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
     start_time = time.time()
     print(f"\n[API] 📝 Enhanced Multi-Step RAG Request (Modular): {request.query}")
     print(f"[API] 🔍 Parallel execution: {request.use_parallel_execution}")
-    
-    # Check cache first
+
+    # Prepare chat history first for preprocessing
+    chat_history = []
+    history_summary = ""
+
+    if request.previous_responses:
+        history_summary = summarize_pairs(request.previous_responses)
+        print(f"[API] History summary: {history_summary[:100]}...")
+
+    # STEP 1: Preprocess query untuk cache optimization
+    preprocessing_result = await preprocess_query_for_cache(
+        original_query=request.query,
+        history_summary=history_summary,
+        embedding_model=request.embedding_model,
+        previous_responses=request.previous_responses,
+    )
+
+    cache_query = preprocessing_result["cache_query"]
+    needs_rewriting = preprocessing_result["needs_rewriting"]
+
+    print(f"[API] 🔄 Query preprocessing complete:")
+    print(f"  - Original: {request.query}")
+    print(f"  - Cache query: {cache_query}")
+    print(f"  - Needs rewriting: {needs_rewriting}")
+
+    # STEP 2: Check cache dengan processed query
     try:
         cached_result = await cache_system.get_cached_response(
-            query=request.query, 
-            embedding_model=request.embedding_model
+            query=cache_query,  # ← Gunakan cache_query, bukan original query
+            embedding_model=request.embedding_model,
         )
     except Exception as cache_error:
         print(f"[API] ⚠️ Cache lookup error: {cache_error}")
         cached_result = None
-    
+
     if cached_result:
         processing_time_ms = int((time.time() - start_time) * 1000)
-        
+
         if isinstance(cached_result, dict):
             answer = cached_result.get("answer", "")
             referenced_docs = cached_result.get("referenced_documents", [])
@@ -192,31 +221,53 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             answer = str(cached_result)
             referenced_docs = []
             model_info = {}
-        
+
         print(f"🎯 Cache HIT - returning cached response ({processing_time_ms}ms)")
-        
+        print(f"🎯 Cache hit for processed query: {cache_query}")
+
         return MultiStepRAGResponse(
             answer=answer,
             referenced_documents=referenced_docs,
             processing_steps=[
                 StepInfo(
+                    tool="query_preprocessing",
+                    tool_input={
+                        "original_query": request.query,
+                        "history_summary": history_summary,
+                    },
+                    tool_output=f"Query preprocessed: {preprocessing_result['processing_method']}",
+                ),
+                StepInfo(
                     tool="cache_lookup",
-                    tool_input={"query": request.query},
-                    tool_output=f"Cache hit - response retrieved from cache"
-                )
+                    tool_input={"cache_query": cache_query},
+                    tool_output=f"Cache hit - response retrieved from cache",
+                ),
             ],
             processing_time_ms=processing_time_ms,
             model_info={
-                "cached": True, 
-                "cache_type": "redis_exact", 
+                "cached": True,
+                "cache_type": "redis_exact",
                 "embedding_model": request.embedding_model,
-                "modular_architecture": True
-            }
+                "modular_architecture": True,
+                "query_preprocessing": {
+                    "original_query": request.query,
+                    "cache_query": cache_query,
+                    "needs_rewriting": needs_rewriting,
+                    "processing_method": preprocessing_result["processing_method"],
+                },
+            },
         )
-    
+
+    # STEP 3: Cache miss - proceed with RAG processing
+    print(f"[API] ❌ Cache MISS - proceeding with RAG processing")
+
     # Determine execution mode
-    execution_mode = ExecutionMode.PARALLEL if request.use_parallel_execution else ExecutionMode.STANDARD
-    
+    execution_mode = (
+        ExecutionMode.PARALLEL
+        if request.use_parallel_execution
+        else ExecutionMode.STANDARD
+    )
+
     # Start RAG tracking session
     trace = None
     if LANGFUSE_ENABLED:
@@ -224,13 +275,13 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             query=request.query,
             api_type=APIType.MULTI_STEP,
             execution_mode=execution_mode,
-            metadata={"embedding_model": request.embedding_model, "modular": True}
+            metadata={"embedding_model": request.embedding_model, "modular": True},
         )
-    
+
     try:
         # For now, use standard execution (parallel execution will be implemented later)
         print(f"[API] 🔄 Using STANDARD EXECUTION mode (Modular)")
-        
+
         # Check if agent_executor is initialized
         if agent_executor is None:
             print("[API] ❌ Agent executor not initialized")
@@ -239,21 +290,17 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 referenced_documents=[],
                 processing_steps=[],
                 processing_time_ms=int((time.time() - start_time) * 1000),
-                model_info={"error": "Agent not initialized", "modular_architecture": True}
+                model_info={
+                    "error": "Agent not initialized",
+                    "modular_architecture": True,
+                },
             )
 
         # Reset refinement count for new request
         import importlib
+
         refinement_module = importlib.import_module("src.api.tools.refinement_tools")
         refinement_module.refinement_count = 0
-
-        # Prepare chat history
-        chat_history = []
-        history_summary = ""
-
-        if request.previous_responses:
-            history_summary = summarize_pairs(request.previous_responses)
-            print(f"[API] History summary: {history_summary[:100]}...")
 
         # Execute multi-step RAG
         result = await agent_executor.ainvoke(
@@ -261,6 +308,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 "input": request.query,
                 "history_summary": history_summary,
                 "chat_history": chat_history,
+                "previous_responses": request.previous_responses or [],
             }
         )
 
@@ -273,7 +321,9 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         processing_steps = []
 
         intermediate_steps = result.get("intermediate_steps", [])
-        print(f"[API] 📊 Multi-Step RAG Execution - Found {len(intermediate_steps)} steps")
+        print(
+            f"[API] 📊 Multi-Step RAG Execution - Found {len(intermediate_steps)} steps"
+        )
 
         for i, (agent_action, observation) in enumerate(intermediate_steps):
             tool_name = agent_action.tool
@@ -283,7 +333,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             # Enhanced logging untuk setiap step
             print(f"[API] 🔧 Step {i+1}: {tool_name}")
             print(f"[API] 📥 Input: {str(tool_input)[:100]}...")
-            
+
             if tool_name == "search_documents":
                 print(f"[API] 🔍 SEARCH STEP: Looking for documents...")
             elif tool_name == "evaluate_documents":
@@ -328,6 +378,18 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
 
         referenced_documents = unique_docs
 
+        # Add preprocessing step to processing_steps if query was rewritten
+        if needs_rewriting:
+            preprocessing_step = StepInfo(
+                tool="query_preprocessing",
+                tool_input={
+                    "original_query": request.query,
+                    "history_summary": history_summary,
+                },
+                tool_output=f"Query rewritten: {preprocessing_result['processing_method']} - {cache_query}",
+            )
+            processing_steps.insert(0, preprocessing_step)  # Insert at beginning
+
         response_data = {
             "answer": answer,
             "referenced_documents": referenced_documents,
@@ -338,11 +400,17 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 "parallel_execution": False,
                 "cached": False,
                 "modular_architecture": True,
-                "version": "2.0.0"
+                "version": "2.0.0",
+                "query_preprocessing": {
+                    "original_query": request.query,
+                    "cache_query": cache_query,
+                    "needs_rewriting": needs_rewriting,
+                    "processing_method": preprocessing_result["processing_method"],
+                },
             },
         }
 
-        # Cache the response
+        # Cache the response dengan cache_query
         try:
             cache_data = {
                 "answer": answer,
@@ -350,15 +418,23 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 "model_info": {
                     "parallel_execution": False,
                     "embedding_model": request.embedding_model,
-                    "modular_architecture": True
-                }
+                    "modular_architecture": True,
+                    "query_preprocessing": {
+                        "original_query": request.query,
+                        "cache_query": cache_query,
+                        "needs_rewriting": needs_rewriting,
+                        "processing_method": preprocessing_result["processing_method"],
+                    },
+                },
             }
             await cache_system.cache_response(
-                query=request.query,
+                query=cache_query,  # ← Gunakan cache_query untuk storage
                 model=request.embedding_model,
-                response=cache_data
+                response=cache_data,
             )
-            print(f"[API] ✅ Response cached successfully")
+            print(
+                f"[API] ✅ Response cached successfully with cache_query: {cache_query}"
+            )
         except Exception as cache_error:
             print(f"[API] ⚠️ Failed to cache response: {cache_error}")
 
@@ -367,7 +443,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
     except Exception as e:
         print(f"[API] ❌ Error: {str(e)}")
         processing_time_ms = int((time.time() - start_time) * 1000)
-        
+
         return MultiStepRAGResponse(
             answer=f"Maaf, terjadi kesalahan: {str(e)}",
             referenced_documents=[],
@@ -376,21 +452,22 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             model_info={
                 "modular_architecture": True,
                 "error": str(e),
-                "embedding_model": request.embedding_model
+                "embedding_model": request.embedding_model,
             },
         )
 
 
 # ======================= MONITORING & HEALTH ENDPOINTS =======================
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
-        "status": "healthy", 
-        "system": "Enhanced Multi-Step RAG (Modular)", 
+        "status": "healthy",
+        "system": "Enhanced Multi-Step RAG (Modular)",
         "version": "2.0.0",
-        "timestamp": int(time.time())
+        "timestamp": int(time.time()),
     }
 
 
@@ -403,17 +480,17 @@ async def root():
         "architecture": "modular",
         "components": {
             "models": "✅ loaded",
-            "tools": "✅ loaded", 
-            "utils": "✅ loaded"
+            "tools": "✅ loaded",
+            "utils": "✅ loaded",
         },
         "improvements": [
             "🔧 Separated 2180 lines into focused modules",
-            "📦 Clean imports dan dependency management", 
+            "📦 Clean imports dan dependency management",
             "🏗️ Maintainable architecture",
             "⚡ Better performance dengan focused imports",
-            "🧪 Easier testing dengan isolated components"
+            "🧪 Easier testing dengan isolated components",
         ],
-        "status": "operational"
+        "status": "operational",
     }
 
 
@@ -422,11 +499,12 @@ async def monitoring_health_detailed():
     """Detailed health check dengan modular component status"""
     try:
         from cache.smart_cache import get_cache_stats
+
         cache_status = get_cache_stats("multi")
         cache_healthy = cache_status.get("enabled", False)
     except:
         cache_healthy = False
-    
+
     return {
         "status": "healthy",
         "timestamp": time.time(),
@@ -436,14 +514,14 @@ async def monitoring_health_detailed():
             "api": "operational",
             "cache": "operational" if cache_healthy else "degraded",
             "database": "operational",
-            "agent_executor": "operational" if agent_executor else "degraded"
+            "agent_executor": "operational" if agent_executor else "degraded",
         },
         "components": {
             "models": "loaded",
-            "tools": "loaded", 
+            "tools": "loaded",
             "utils": "loaded",
-            "executors": "loaded"
-        }
+            "executors": "loaded",
+        },
     }
 
 
@@ -459,7 +537,7 @@ async def available_models():
             for model_key, config in EMBEDDING_CONFIG.items()
         },
         "architecture": "modular",
-        "version": "2.0.0"
+        "version": "2.0.0",
     }
 
 
@@ -467,6 +545,7 @@ async def available_models():
 async def get_cache_stats_endpoint():
     """Get cache statistics untuk monitoring"""
     from cache.smart_cache import get_cache_stats
+
     stats = get_cache_stats("multi")
     stats["architecture"] = "modular"
     return stats
@@ -476,9 +555,11 @@ async def get_cache_stats_endpoint():
 async def get_observability_status():
     """Get RAG observability status untuk Multi-Step RAG (Modular)"""
     from cache.smart_cache import get_cache_stats
-    
+
     response = {
-        "tracking": rag_tracker.get_status() if LANGFUSE_ENABLED else {"enabled": False},
+        "tracking": (
+            rag_tracker.get_status() if LANGFUSE_ENABLED else {"enabled": False}
+        ),
         "cache": get_cache_stats("multi"),
         "api_type": "enhanced_multi_step_rag_modular",
         "version": "2.0.0",
@@ -490,26 +571,28 @@ async def get_observability_status():
             "Performance monitoring",
             "Multi-step process tracking",
             "Parallel vs Standard execution analytics",
-            "Agent-based tool orchestration tracking"
-        ]
+            "Agent-based tool orchestration tracking",
+        ],
     }
-    
+
     if LANGFUSE_ENABLED:
-        response["tracking"].update({
-            "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
-            "metrics_tracked": {
-                "cost_per_request": "USD cost for LLM calls",
-                "token_usage": "Input/output tokens for each request",
-                "document_retrieval": "Number of documents retrieved",
-                "response_time": "End-to-end processing time",
-                "embedding_model": "Which embedding model used",
-                "execution_mode": "Parallel vs Standard execution",
-                "processing_steps": "Multi-step RAG tool usage",
-                "agent_actions": "Tool calls and reasoning steps",
-                "modular_components": "Track which modules were used"
+        response["tracking"].update(
+            {
+                "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
+                "metrics_tracked": {
+                    "cost_per_request": "USD cost for LLM calls",
+                    "token_usage": "Input/output tokens for each request",
+                    "document_retrieval": "Number of documents retrieved",
+                    "response_time": "End-to-end processing time",
+                    "embedding_model": "Which embedding model used",
+                    "execution_mode": "Parallel vs Standard execution",
+                    "processing_steps": "Multi-step RAG tool usage",
+                    "agent_actions": "Tool calls and reasoning steps",
+                    "modular_components": "Track which modules were used",
+                },
             }
-        })
-    
+        )
+
     return response
 
 
@@ -518,23 +601,100 @@ async def clear_cache():
     """Clear all cache (use with caution)"""
     try:
         from cache.smart_cache import clear_cache
+
         clear_cache("multi")
         return {
-            "status": "success", 
+            "status": "success",
             "message": "Multi-step RAG cache cleared successfully (Modular)",
-            "architecture": "modular"
+            "architecture": "modular",
         }
     except Exception as e:
         return {
-            "status": "error", 
+            "status": "error",
             "message": f"Failed to clear cache: {str(e)}",
-            "architecture": "modular"
+            "architecture": "modular",
+        }
+
+
+async def preprocess_query_for_cache(
+    original_query: str,
+    history_summary: str = "",
+    embedding_model: str = "large",
+    previous_responses: List[str] = None,
+) -> Dict[str, Any]:
+    """
+    Preprocess query untuk cache lookup yang optimal.
+
+    Alur:
+    1. Analisis apakah query context-dependent
+    2. Jika ya, lakukan query rewriting
+    3. Return processed query untuk cache lookup
+
+    Args:
+        original_query: Query asli dari user
+        history_summary: Ringkasan chat history
+        embedding_model: Model embedding yang digunakan
+
+    Returns:
+        Dict dengan original_query, processed_query, dan metadata
+    """
+    try:
+        print(f"\n[CACHE PREPROCESSING] 🧠 Analyzing query for cache optimization...")
+        print(f"[CACHE PREPROCESSING] 📝 Original query: {original_query}")
+        print(f"[CACHE PREPROCESSING] 📚 Has history: {bool(history_summary)}")
+
+        # Gunakan smart preprocessing untuk analisis dan rewriting
+        preprocessing_result = smart_query_preprocessing_with_history.invoke(
+            {
+                "current_query": original_query,
+                "history_summary": history_summary,
+                "previous_responses": previous_responses or [],
+            }
+        )
+
+        processed_query = preprocessing_result.get("processed_query", original_query)
+        processing_method = preprocessing_result.get("processing_method", "original")
+        needs_rewriting = preprocessing_result.get("context_analysis", {}).get(
+            "needs_rewriting", False
+        )
+
+        # Tentukan query mana yang akan digunakan untuk cache
+        cache_query = processed_query if needs_rewriting else original_query
+
+        result = {
+            "original_query": original_query,
+            "processed_query": processed_query,
+            "cache_query": cache_query,
+            "processing_method": processing_method,
+            "needs_rewriting": needs_rewriting,
+            "preprocessing_result": preprocessing_result,
+        }
+
+        print(f"[CACHE PREPROCESSING] ✅ Analysis complete:")
+        print(f"  - Needs rewriting: {needs_rewriting}")
+        print(f"  - Cache query: {cache_query}")
+        print(f"  - Processing method: {processing_method}")
+
+        return result
+
+    except Exception as e:
+        print(f"[CACHE PREPROCESSING] ❌ Error in preprocessing: {str(e)}")
+        return {
+            "original_query": original_query,
+            "processed_query": original_query,
+            "cache_query": original_query,
+            "processing_method": "error_fallback",
+            "needs_rewriting": False,
+            "preprocessing_result": {},
         }
 
 
 # For development only
 if __name__ == "__main__":
     import os
+
     port = int(os.getenv("PORT", 8080))
     print(f"Starting development server (Modular) on port {port}")
-    uvicorn.run("src.api.multi_api_refactored:app", host="0.0.0.0", port=port, reload=False) 
+    uvicorn.run(
+        "src.api.multi_api_refactored:app", host="0.0.0.0", port=port, reload=False
+    )

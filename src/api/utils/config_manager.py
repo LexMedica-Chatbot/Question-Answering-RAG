@@ -14,5 +14,5 @@ MODELS = {
     # gabungkan refiner + evaluator:
     "REF_EVAL": {"model": "gpt-4.1-nano", "temperature": 0.25},
     "GENERATOR": {"model": "gpt-4.1-mini", "temperature": 0.2},
-    "SUMMARY": {"model": "gpt-4.1-mini", "temperature": 0}
-} 
+    "SUMMARY": {"model": "gpt-4.1-mini", "temperature": 0},
+}

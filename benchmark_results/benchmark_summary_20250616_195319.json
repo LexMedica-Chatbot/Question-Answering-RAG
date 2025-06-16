@@ -1,0 +1,200 @@
+{
+  "overall": {
+    "total_tests": 48,
+    "successful_tests": 48,
+    "success_rate": 100.0,
+    "timestamp": "2025-06-16T19:53:19.666967"
+  },
+  "by_combination": {
+    "simple_small": {
+      "total_tests": 12,
+      "successful_tests": 12,
+      "success_rate": 100.0,
+      "avg_response_time_ms": 13786.833333333334,
+      "median_response_time_ms": 13644.5,
+      "min_response_time_ms": "4761",
+      "max_response_time_ms": "26669",
+      "avg_answer_length": 2019.75,
+      "avg_word_count": 269.6666666666667,
+      "avg_num_documents": 4.0,
+      "avg_processing_steps": 1.0,
+      "avg_keyword_score": 0.9166666666666666,
+      "avg_structure_score": 0.8166666666666668,
+      "avg_completeness_score": 0.9482499999999999,
+      "avg_overall_quality": 0.8938611111111111,
+      "performance_by_difficulty": {
+        "easy": {
+          "count": 3,
+          "avg_response_time_ms": 7251.666666666667,
+          "avg_quality": 0.7976666666666666,
+          "success_rate": 100.0
+        },
+        "medium": {
+          "count": 4,
+          "avg_response_time_ms": 12699.75,
+          "avg_quality": 0.8333333333333334,
+          "success_rate": 100.0
+        },
+        "hard": {
+          "count": 3,
+          "avg_response_time_ms": 15835.666666666666,
+          "avg_quality": 1.0,
+          "success_rate": 100.0
+        },
+        "very_hard": {
+          "count": 2,
+          "avg_response_time_ms": 22690.5,
+          "avg_quality": 1.0,
+          "success_rate": 100.0
+        }
+      }
+    },
+    "simple_large": {
+      "total_tests": 12,
+      "successful_tests": 12,
+      "success_rate": 100.0,
+      "avg_response_time_ms": 15845.333333333334,
+      "median_response_time_ms": 16839.5,
+      "min_response_time_ms": "6746",
+      "max_response_time_ms": "24691",
+      "avg_answer_length": 2226.5833333333335,
+      "avg_word_count": 303.9166666666667,
+      "avg_num_documents": 4.0,
+      "avg_processing_steps": 1.0,
+      "avg_keyword_score": 0.9444444444444443,
+      "avg_structure_score": 0.8333333333333334,
+      "avg_completeness_score": 0.9624722222222223,
+      "avg_overall_quality": 0.9134166666666665,
+      "performance_by_difficulty": {
+        "easy": {
+          "count": 3,
+          "avg_response_time_ms": 7903.333333333333,
+          "avg_quality": 0.798111111111111,
+          "success_rate": 100.0
+        },
+        "medium": {
+          "count": 4,
+          "avg_response_time_ms": 17096.75,
+          "avg_quality": 0.8916666666666666,
+          "success_rate": 100.0
+        },
+        "hard": {
+          "count": 3,
+          "avg_response_time_ms": 17190.666666666668,
+          "avg_quality": 1.0,
+          "success_rate": 100.0
+        },
+        "very_hard": {
+          "count": 2,
+          "avg_response_time_ms": 23237.5,
+          "avg_quality": 1.0,
+          "success_rate": 100.0
+        }
+      }
+    },
+    "multi_small": {
+      "total_tests": 12,
+      "successful_tests": 12,
+      "success_rate": 100.0,
+      "avg_response_time_ms": 69033.58333333333,
+      "median_response_time_ms": 68805.0,
+      "min_response_time_ms": "21205",
+      "max_response_time_ms": "112816",
+      "avg_answer_length": 928.5,
+      "avg_word_count": 125.58333333333333,
+      "avg_num_documents": 6.583333333333333,
+      "avg_processing_steps": 4.416666666666667,
+      "avg_keyword_score": 0.5,
+      "avg_structure_score": 0.39999999999999997,
+      "avg_completeness_score": 0.5409999999999999,
+      "avg_overall_quality": 0.4803333333333332,
+      "performance_by_difficulty": {
+        "easy": {
+          "count": 3,
+          "avg_response_time_ms": 30682.666666666668,
+          "avg_quality": 0.48311111111111105,
+          "success_rate": 100.0
+        },
+        "medium": {
+          "count": 4,
+          "avg_response_time_ms": 71866.0,
+          "avg_quality": 0.8333333333333333,
+          "success_rate": 100.0
+        },
+        "hard": {
+          "count": 3,
+          "avg_response_time_ms": 86141.33333333333,
+          "avg_quality": 0.31911111111111107,
+          "success_rate": 100.0
+        },
+        "very_hard": {
+          "count": 2,
+          "avg_response_time_ms": 95233.5,
+          "avg_quality": 0.011999999999999999,
+          "success_rate": 100.0
+        }
+      }
+    },
+    "multi_large": {
+      "total_tests": 12,
+      "successful_tests": 12,
+      "success_rate": 100.0,
+      "avg_response_time_ms": 68767.16666666667,
+      "median_response_time_ms": 71038.0,
+      "min_response_time_ms": "22740",
+      "max_response_time_ms": "110316",
+      "avg_answer_length": 940.1666666666666,
+      "avg_word_count": 125.5,
+      "avg_num_documents": 6.416666666666667,
+      "avg_processing_steps": 4.5,
+      "avg_keyword_score": 0.5277777777777778,
+      "avg_structure_score": 0.3333333333333333,
+      "avg_completeness_score": 0.5548888888888888,
+      "avg_overall_quality": 0.4719999999999998,
+      "performance_by_difficulty": {
+        "easy": {
+          "count": 3,
+          "avg_response_time_ms": 52273.333333333336,
+          "avg_quality": 0.7235555555555555,
+          "success_rate": 100.0
+        },
+        "medium": {
+          "count": 4,
+          "avg_response_time_ms": 72714.75,
+          "avg_quality": 0.6696666666666666,
+          "success_rate": 100.0
+        },
+        "hard": {
+          "count": 3,
+          "avg_response_time_ms": 78999.33333333333,
+          "avg_quality": 0.26355555555555554,
+          "success_rate": 100.0
+        },
+        "very_hard": {
+          "count": 2,
+          "avg_response_time_ms": 70264.5,
+          "avg_quality": 0.011999999999999999,
+          "success_rate": 100.0
+        }
+      }
+    }
+  },
+  "comparison": {
+    "best_overall_performance": {
+      "combination": "simple_large",
+      "score": 91.34166666666665
+    },
+    "fastest_response": {
+      "combination": "simple_small",
+      "avg_time_ms": 13786.833333333334
+    },
+    "highest_quality": {
+      "combination": "simple_large",
+      "avg_quality": 0.9134166666666665
+    },
+    "most_comprehensive": {
+      "combination": "multi_small",
+      "avg_documents": 6.583333333333333
+    }
+  }
+}

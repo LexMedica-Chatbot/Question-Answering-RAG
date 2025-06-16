@@ -1,0 +1,20 @@
+services:
+    lexmedica-simple:
+        container_name: lexmedica-simple
+        build:
+            context: .
+            dockerfile: Dockerfile.simple
+        ports:
+            - "8081:8081"
+        env_file:
+            - .env
+        environment:
+            - PORT=8081
+        volumes:
+            - .:/app
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
