@@ -276,10 +276,14 @@ async def parallel_tool_orchestration(
             evaluation_result = f"Evaluation error: {str(eval_error)}"
 
         try:
-            # Run answer generation synchronously dengan history context
+            # Run answer generation synchronously dengan history context dan evaluation result
             enhanced_query = query + history_context if history_context else query
             answer_result = generate_answer.invoke(
-                {"documents": docs_data, "query": enhanced_query}
+                {
+                    "documents": docs_data, 
+                    "query": enhanced_query,
+                    "evaluation_result": evaluation_result
+                }
             )
             print(
                 f"[PARALLEL] ✅ Answer generation completed: {len(answer_result)} chars"
@@ -401,19 +405,51 @@ async def startup_event():
             ]
             
             # Create system prompt for agent
-            system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
+            system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan Enhanced Multi-Step RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
 
-Anda memiliki akses ke database dokumen peraturan kesehatan Indonesia dan akan mengikuti langkah-langkah berikut:
+TUGAS ANDA:
+1. Memahami pertanyaan pengguna tentang hukum kesehatan Indonesia 
+2. Mencari dokumen yang relevan dengan pertanyaan (maksimal 3 dokumen)
+3. Mengevaluasi apakah dokumen yang ditemukan memadai untuk menjawab pertanyaan
+4. Jika evaluasi menunjukkan "KURANG MEMADAI", sempurnakan query HANYA SEKALI dan cari lagi
+5. Setelah pencarian kedua, langsung hasilkan jawaban berdasarkan dokumen yang ada
+6. JANGAN melakukan evaluasi kedua setelah penyempurnaan query
 
-1. SEARCH: Cari dokumen yang relevan dengan pertanyaan pengguna
-2. EVALUATE: Evaluasi apakah dokumen yang ditemukan cukup untuk menjawab pertanyaan
-3. REFINE (jika perlu): Perbaiki query pencarian jika dokumen tidak cukup relevan
-4. GENERATE: Hasilkan jawaban berdasarkan dokumen yang relevan
+ATURAN WAJIB (MANDATORY RULES):
+1. 🔍 STEP 1 - SEARCH: Selalu mulai dengan `search_documents` untuk mencari dokumen relevan dengan query yang spesifik
+2. 📊 STEP 2 - EVALUATE: Gunakan `evaluate_documents` untuk menilai kualitas dokumen yang ditemukan  
+3. 🔧 STEP 3 - REFINE (jika perlu): Jika dokumen kurang memadai, gunakan `refine_query` SEKALI saja lalu `search_documents` lagi
+4. ✨ STEP 4 - GENERATE: Gunakan `generate_answer` dengan HANYA dokumen yang paling relevan (maksimal 3 dokumen)
 
-INGAT: 
-1. Setelah penyempurnaan query, langsung hasilkan jawaban tanpa evaluasi kedua
-2. JANGAN melakukan penyempurnaan query lebih dari sekali  
-3. Lebih baik memberikan jawaban berdasarkan dokumen yang ada daripada terus melakukan evaluasi"""
+ATURAN SELEKSI DOKUMEN:
+- Hanya pilih dokumen yang BENAR-BENAR menjawab pertanyaan
+- Prioritaskan dokumen dengan status "berlaku" daripada "dicabut"  
+- Jangan sertakan dokumen yang hanya tangensial atau tidak langsung relevan
+- Untuk generate_answer, berikan HANYA dokumen yang akan dikutip dalam jawaban
+
+KRITERIA EVALUASI:
+- MEMADAI: Dokumen mengandung informasi langsung yang menjawab pertanyaan, dengan detail yang cukup
+- KURANG MEMADAI: Dokumen terlalu umum, tidak langsung menjawab, atau kurang detail
+
+INSTRUKSI KHUSUS DATA PASSING:
+- Saat memanggil `generate_answer`, pastikan untuk melewatkan:
+  1. Parameter `documents`: List dokumen yang sudah difilter (hanya yang relevan)
+  2. Parameter `query`: Query asli dari pengguna
+- Format documents harus berisi full metadata termasuk status
+
+CONTOH WORKFLOW:
+1. search_documents(query="definisi kesehatan menurut UU terbaru", limit=3)
+2. evaluate_documents(query=..., documents=hasil_search) 
+3. Jika KURANG MEMADAI: refine_query + search_documents lagi
+4. generate_answer(documents=dokumen_terpilih, query=query_asli)
+
+LARANGAN:
+❌ JANGAN evaluasi berulang-ulang
+❌ JANGAN gunakan semua dokumen untuk generate_answer jika tidak relevan
+❌ JANGAN lewatkan parameter query saat memanggil generate_answer
+❌ JANGAN sertakan dokumen yang tidak akan dikutip dalam jawaban
+
+Jawab dengan profesional dalam Bahasa Indonesia, gunakan sitasi yang akurat, dan pastikan menjawab pertanyaan secara langsung."""
 
             # Create prompt template
             prompt = ChatPromptTemplate.from_messages([
@@ -427,16 +463,9 @@ INGAT:
             # Create OpenAI tools agent
             agent = create_openai_tools_agent(llm, tools, prompt)
             
-            # Create agent executor
-            agent_executor = AgentExecutor(
-                agent=agent,
-                tools=tools,
-                verbose=False,
-                handle_parsing_errors=True,
-                return_intermediate_steps=True,
-                max_execution_time=120,
-                max_iterations=6,
-            )
+            # Create enhanced agent executor with better prompt
+            from .executors.agent_executor import create_enhanced_agent_executor
+            agent_executor = create_enhanced_agent_executor(tools, MODELS["MAIN"])
             
             print("✅ RAG agent initialized successfully")
         except Exception as agent_error:
@@ -481,14 +510,14 @@ MODELS = {
     "MAIN": {"model": "gpt-4.1-mini", "temperature": 0.2},
     # gabungkan refiner + evaluator:
     "REF_EVAL": {"model": "gpt-4.1-nano", "temperature": 0.25},
-    "GENERATOR": {"model": "gpt-4o-mini", "temperature": 0.2},
+    "GENERATOR": {"model": "gpt-4.1-mini", "temperature": 0.2},
 }
 
 # Initialize LLM dengan model utama
 llm = ChatOpenAI(**MODELS["MAIN"])
 
 # ── setelah MODELS dict ─────────────────────────────
-MODELS["SUMMARY"] = {"model": "gpt-4o-mini", "temperature": 0}
+MODELS["SUMMARY"] = {"model": "gpt-4.1-mini", "temperature": 0}
 
 summary_llm = ChatOpenAI(**MODELS["SUMMARY"])
 summary_prompt = ChatPromptTemplate.from_messages(
@@ -782,119 +811,107 @@ def clean_control(text: str) -> str:
 
 @tool
 def search_documents(
-    query: str, embedding_model: str = "large", limit: int = 5
+    query: str, embedding_model: str = "large", limit: int = 5  # Kembalikan ke 5, bisa lebih
 ) -> Dict[str, Any]:
     """
-    Mencari dokumen dari vectorstore berdasarkan kueri yang diberikan.
-
+    Mencari dokumen yang relevan dengan query menggunakan vector similarity search.
+    Ambil semua dokumen yang mirip untuk evaluasi, tanpa filtering prematur.
+    
     Args:
-        query: Query pencarian untuk menemukan dokumen yang relevan
-        embedding_model: Model embedding yang digunakan ("small" atau "large")
-        limit: Jumlah dokumen yang dikembalikan
-
+        query: Query pencarian dalam bahasa Indonesia
+        embedding_model: Model embedding ("small" atau "large")
+        limit: Maksimal jumlah dokumen yang dikembalikan (default: 5)
+        
     Returns:
-        Dictionary berisi dokumen yang diformat untuk LLM dan data dokumen terstruktur
+        Dict dengan format dokumen dan konten terstruktur untuk LLM
     """
     try:
-        print(f"\n[TOOL] Searching for documents with query: {query}")
+        print(f"[TOOL] Searching for documents with query: {query}")
+        
+        # Validate inputs
+        if not query or not query.strip():
+            return {"error": "Query tidak boleh kosong"}
+            
+        if embedding_model not in ["small", "large"]:
+            embedding_model = "large"
+            
+        # Allow more documents for comprehensive evaluation
+        if limit < 1:
+            limit = 5
+        elif limit > 10:  # Allow up to 10 documents for thorough evaluation
+            limit = 10
+        
+        print(f"[TOOL] Using embedding model: {embedding_model}, limit: {limit}")
+        
+        # Get vector store
+        vectorstore = get_vector_store(embedding_model)
+        if not vectorstore:
+            return {"error": "Vectorstore tidak tersedia"}
 
-        # Gunakan vector store dari global cache
-        vector_store = get_vector_store(embedding_model)
-        retriever = vector_store.as_retriever(search_kwargs={"k": limit})
-        docs = retriever.invoke(query)
-
+        # Search for similar documents - NO filtering yet
+        docs = vectorstore.similarity_search(
+            query,
+            k=limit,
+            filter=None
+        )
+        
         if not docs:
+            print("[TOOL] No documents found")
             return {
-                "formatted_docs_for_llm": "Tidak ditemukan dokumen yang relevan dengan query tersebut.",
-                "retrieved_docs_data": [],
+                "formatted_docs_for_llm": "Tidak ada dokumen ditemukan untuk query ini.",
+                "retrieved_docs_data": []
             }
-
-        # Format dokumen untuk konteks LLM
-        formatted_docs_for_llm = format_docs(docs)
-
-        # Siapkan data terstruktur untuk setiap dokumen yang diambil
-        retrieved_docs_data = []
-        for i, doc in enumerate(docs):
-            metadata = doc.metadata if isinstance(doc.metadata, dict) else {}
-            content = clean_control(doc.page_content)  # Bersihkan karakter kontrol
-
-            # Ekstrak informasi dasar dari metadata
-            jenis_peraturan = metadata.get("jenis_peraturan", "")
-            nomor_peraturan = metadata.get("nomor_peraturan", "")
-            tahun_peraturan = metadata.get("tahun_peraturan", "")
-            tipe_bagian = metadata.get("tipe_bagian", "")
-            status = metadata.get("status", "berlaku")
-            bagian_dari = metadata.get("bagian_dari", "")
-            judul_peraturan = metadata.get("judul_peraturan", "")
-
-            # Jika metadata tidak lengkap, coba ekstrak dari konten
-            if not all([jenis_peraturan, nomor_peraturan, tahun_peraturan]):
-                extracted_info = extract_document_info(content)
-                jenis_peraturan = extracted_info.get("jenis_peraturan", jenis_peraturan)
-                nomor_peraturan = extracted_info.get("nomor_peraturan", nomor_peraturan)
-                tahun_peraturan = extracted_info.get("tahun_peraturan", tahun_peraturan)
-                tipe_bagian = extracted_info.get("tipe_bagian", tipe_bagian)
-                status = extracted_info.get("status", status)
-                bagian_dari = extracted_info.get("bagian_dari", bagian_dari)
-                judul_peraturan = extracted_info.get("judul_peraturan", judul_peraturan)
-
-            # Buat nama dokumen
-            doc_name = ""
-            if jenis_peraturan and nomor_peraturan and tahun_peraturan:
-                doc_name = (
-                    f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
-                )
-                if tipe_bagian:
-                    doc_name += f" {tipe_bagian}"
-                if judul_peraturan:
-                    doc_name += f" tentang {judul_peraturan}"
-
-            # Buat metadata terstruktur
-            structured_metadata = {
-                "status": status,
-                "bagian_dari": bagian_dari,
-                "tipe_bagian": tipe_bagian,
-                "jenis_peraturan": jenis_peraturan,
-                "judul_peraturan": judul_peraturan,
-                "nomor_peraturan": nomor_peraturan,
-                "tahun_peraturan": tahun_peraturan,
-            }
-
-            # Buat label peraturan untuk ditampilkan di frontend
-            peraturan_label = ""
-            if jenis_peraturan and nomor_peraturan and tahun_peraturan:
-                peraturan_label = (
-                    f"{jenis_peraturan} No. {nomor_peraturan} Tahun {tahun_peraturan}"
-                )
-                if tipe_bagian:
-                    peraturan_label += f" {tipe_bagian}"
-                if judul_peraturan:
-                    peraturan_label += f" tentang {judul_peraturan}"
-
-            retrieved_docs_data.append(
-                {
-                    "name": f"Dokumen #{i+1}",
-                    "source": doc_name,
-                    "content": content,
-                    "metadata": {
-                        **structured_metadata,
-                        "label": peraturan_label,  # Tambahkan label untuk frontend
-                    },
-                }
-            )
-
+        
         print(f"[TOOL] Found {len(docs)} documents")
-
+        
+        # Process ALL documents without filtering - let evaluation decide
+        retrieved_docs_data = []
+        formatted_docs_parts = []
+        
+        for i, doc in enumerate(docs):
+            # Extract metadata with validation
+            metadata = getattr(doc, 'metadata', {})
+            content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+            
+            # Only skip completely empty documents
+            if len(content.strip()) < 10:
+                continue
+                
+            # Extract key information
+            status = metadata.get('status', 'berlaku')  # Default to 'berlaku' for newer docs
+            source = (
+                metadata.get('label') or 
+                metadata.get('source') or 
+                f"Dokumen #{i+1}"
+            )
+            
+            # Format for LLM with enhanced structure
+            formatted_doc = f"{source} (Status: {status}):\n{content}"
+            formatted_docs_parts.append(formatted_doc)
+            
+            # Store structured data for response - KEEP ALL DOCUMENTS
+            doc_data = {
+                "name": f"Dokumen #{i+1}",
+                "source": source,
+                "content": content,
+                "metadata": metadata
+            }
+            retrieved_docs_data.append(doc_data)
+        
+        # Join all formatted docs
+        formatted_docs_for_llm = "\n\n\n".join(formatted_docs_parts)
+        
+        print(f"[TOOL] Returning {len(retrieved_docs_data)} documents for evaluation")
+        
         return {
             "formatted_docs_for_llm": formatted_docs_for_llm,
-            "retrieved_docs_data": retrieved_docs_data,
+            "retrieved_docs_data": retrieved_docs_data
         }
+        
     except Exception as e:
-        print(f"[ERROR] Error pada pencarian dokumen: {str(e)}")
-        return {
-            "formatted_docs_for_llm": f"Error pada pencarian dokumen: {str(e)}",
-            "retrieved_docs_data": [],
-        }
+        error_msg = f"Error dalam pencarian dokumen: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        return {"error": error_msg}
 
 
 # Tambahkan variabel untuk melacak jumlah penyempurnaan
@@ -1447,41 +1464,51 @@ Silakan coba pertanyaan lain yang lebih spesifik atau dengan kata kunci yang ber
 # ======================= MULTI-STEP RAG DEFINITION =======================
 
 # Setup system prompt for the multi-step RAG
-system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
+system_prompt = """Anda adalah asisten hukum kesehatan Indonesia berbasis AI yang menggunakan pendekatan Enhanced Multi-Step RAG (Retrieval-Augmented Generation) untuk menjawab pertanyaan.
 
 TUGAS ANDA:
 1. Memahami pertanyaan pengguna tentang hukum kesehatan Indonesia 
-2. Mencari dokumen yang relevan dengan pertanyaan
+2. Mencari dokumen yang relevan dengan pertanyaan (maksimal 3 dokumen)
 3. Mengevaluasi apakah dokumen yang ditemukan memadai untuk menjawab pertanyaan
 4. Jika evaluasi menunjukkan "KURANG MEMADAI", sempurnakan query HANYA SEKALI dan cari lagi
 5. Setelah pencarian kedua, langsung hasilkan jawaban berdasarkan dokumen yang ada
 6. JANGAN melakukan evaluasi kedua setelah penyempurnaan query
 
-ALUR KERJA ANDA:
-1. Cari dokumen menggunakan query asli
-2. Evaluasi dokumen yang ditemukan
-3. Jika evaluasi menunjukkan "KURANG MEMADAI", sempurnakan query SEKALI dan cari lagi
-4. Setelah pencarian kedua, langsung hasilkan jawaban
-5. JANGAN melakukan evaluasi kedua
+ATURAN WAJIB (MANDATORY RULES):
+1. 🔍 STEP 1 - SEARCH: Selalu mulai dengan `search_documents` untuk mencari dokumen relevan dengan query yang spesifik
+2. 📊 STEP 2 - EVALUATE: Gunakan `evaluate_documents` untuk menilai kualitas dokumen yang ditemukan  
+3. 🔧 STEP 3 - REFINE (jika perlu): Jika dokumen kurang memadai, gunakan `refine_query` SEKALI saja lalu `search_documents` lagi
+4. ✨ STEP 4 - GENERATE: Gunakan `generate_answer` dengan HANYA dokumen yang paling relevan (maksimal 3 dokumen)
 
-ATURAN PENTING:
-1. Jawaban HARUS berdasarkan dokumen yang ditemukan
-2. Gunakan Bahasa Indonesia formal dan terminologi hukum yang tepat
-3. Hanya informasi dari database dokumen hukum kesehatan yang dapat digunakan
-4. SELALU sertakan query asli saat memanggil evaluate_documents
-5. HANYA BOLEH melakukan penyempurnaan query SEKALI
-6. JANGAN melakukan evaluasi kedua setelah penyempurnaan query
-7. SETELAH langkah ke-4 (pencarian kedua) SEGERA panggil generate_answer dan JANGAN memanggil evaluate_documents lagi
+ATURAN SELEKSI DOKUMEN:
+- Hanya pilih dokumen yang BENAR-BENAR menjawab pertanyaan
+- Prioritaskan dokumen dengan status "berlaku" daripada "dicabut"  
+- Jangan sertakan dokumen yang hanya tangensial atau tidak langsung relevan
+- Untuk generate_answer, berikan HANYA dokumen yang akan dikutip dalam jawaban
 
-PENANGANAN STATUS PERATURAN:
-1. Prioritaskan informasi dari dokumen dengan status "berlaku"
-2. Ketika memberikan jawaban, selalu sebutkan status peraturan yang dirujuk
-3. Peraturan yang "dicabut" hanya digunakan untuk konteks historis
+KRITERIA EVALUASI:
+- MEMADAI: Dokumen mengandung informasi langsung yang menjawab pertanyaan, dengan detail yang cukup
+- KURANG MEMADAI: Dokumen terlalu umum, tidak langsung menjawab, atau kurang detail
 
-INGAT: 
-1. Setelah penyempurnaan query, langsung hasilkan jawaban tanpa evaluasi kedua
-2. JANGAN melakukan penyempurnaan query lebih dari sekali
-3. Lebih baik memberikan jawaban berdasarkan dokumen yang ada daripada terus melakukan evaluasi"""
+INSTRUKSI KHUSUS DATA PASSING:
+- Saat memanggil `generate_answer`, pastikan untuk melewatkan:
+  1. Parameter `documents`: List dokumen yang sudah difilter (hanya yang relevan)
+  2. Parameter `query`: Query asli dari pengguna
+- Format documents harus berisi full metadata termasuk status
+
+CONTOH WORKFLOW:
+1. search_documents(query="definisi kesehatan menurut UU terbaru", limit=3)
+2. evaluate_documents(query=..., documents=hasil_search) 
+3. Jika KURANG MEMADAI: refine_query + search_documents lagi
+4. generate_answer(documents=dokumen_terpilih, query=query_asli)
+
+LARANGAN:
+❌ JANGAN evaluasi berulang-ulang
+❌ JANGAN gunakan semua dokumen untuk generate_answer jika tidak relevan
+❌ JANGAN lewatkan parameter query saat memanggil generate_answer
+❌ JANGAN sertakan dokumen yang tidak akan dikutip dalam jawaban
+
+Jawab dengan profesional dalam Bahasa Indonesia, gunakan sitasi yang akurat, dan pastikan menjawab pertanyaan secara langsung."""
 
 # Agent executor akan diinisialisasi saat startup
 # Tambahkan variabel untuk melacak jumlah penyempurnaan
@@ -1638,14 +1665,34 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                     end_time = time.time()
                     processing_time_ms = int((end_time - start_time) * 1000)
 
-                    # Extract answer from parallel result
-                    answer = parallel_result.get("answer", "")
-                    if isinstance(answer, dict) and "answer" in answer:
-                        answer = answer["answer"]
-
-                    # Extract documents from search results
-                    search_result = parallel_result.get("search_result", {})
-                    referenced_documents = search_result.get("retrieved_docs_data", [])
+                    # Extract answer and filtered documents from parallel result
+                    answer_result = parallel_result.get("answer", "")
+                    
+                    # Try to parse JSON response from generate_answer
+                    try:
+                        if isinstance(answer_result, str):
+                            answer_json = json.loads(answer_result)
+                            answer = answer_json.get("answer", answer_result)
+                            # Use filtered documents from generate_answer if available
+                            filtered_docs = answer_json.get("filtered_documents", [])
+                            if filtered_docs:
+                                referenced_documents = filtered_docs
+                                print(f"[API] ✅ Using filtered documents from generate_answer: {len(referenced_documents)} documents")
+                            else:
+                                # Fallback to search results
+                                search_result = parallel_result.get("search_result", {})
+                                referenced_documents = search_result.get("retrieved_docs_data", [])
+                        else:
+                            answer = str(answer_result)
+                            # Fallback to search results
+                            search_result = parallel_result.get("search_result", {})
+                            referenced_documents = search_result.get("retrieved_docs_data", [])
+                    except json.JSONDecodeError:
+                        # If not JSON, treat as plain string
+                        answer = str(answer_result)
+                        # Fallback to search results
+                        search_result = parallel_result.get("search_result", {})
+                        referenced_documents = search_result.get("retrieved_docs_data", [])
 
                     print(f"[API] 🔍 Debug - Parallel execution successful!")
                     print(
@@ -2012,14 +2059,19 @@ async def standard_execution(
         # Extract referenced documents and processing steps from intermediate steps
         referenced_documents = []
         processing_steps = []
+        generation_result = None
+        all_search_documents = []  # Track all documents from search
 
         intermediate_steps = result.get("intermediate_steps", [])
-        print(f"[API] Found {len(intermediate_steps)} intermediate steps")
+        print(f"\n[API] 📋 Found {len(intermediate_steps)} intermediate steps")
 
         for i, (agent_action, observation) in enumerate(intermediate_steps):
             tool_name = agent_action.tool
             tool_input = agent_action.tool_input
             tool_output = str(observation)
+
+            print(f"\n[API] 🔧 Step {i+1}: {tool_name}")
+            print(f"[API] 📥 Input: {str(tool_input)[:100]}...")
 
             # Create step info
             step_info = StepInfo(
@@ -2033,42 +2085,104 @@ async def standard_execution(
             )
             processing_steps.append(step_info)
 
-            # Extract referenced documents from search_documents tool
-            if tool_name == "search_documents" and isinstance(observation, dict):
-                docs_data = observation.get("retrieved_docs_data", [])
-                if docs_data:
-                    referenced_documents.extend(docs_data)
-                    print(
-                        f"[API] Extracted {len(docs_data)} documents from search_documents"
-                    )
+            # Track all search documents for comparison
+            if tool_name == "search_documents":
+                print(f"[API] 🔍 SEARCH STEP: Looking for documents...")
+                if isinstance(observation, dict):
+                    docs_data = observation.get("retrieved_docs_data", [])
+                    if docs_data:
+                        all_search_documents.extend(docs_data)
+                        print(f"[API] 📄 Found {len(docs_data)} documents from search")
+                elif isinstance(observation, str):
+                    try:
+                        parsed_obs = safe_parse(observation)
+                        if isinstance(parsed_obs, dict):
+                            docs_data = parsed_obs.get("retrieved_docs_data", [])
+                            if docs_data:
+                                all_search_documents.extend(docs_data)
+                                print(f"[API] 📄 Found {len(docs_data)} documents from search (parsed)")
+                    except Exception as parse_error:
+                        print(f"[API] ⚠️ Failed to parse search observation: {parse_error}")
 
-            # Handle string observations that might contain JSON
-            elif tool_name == "search_documents" and isinstance(observation, str):
+            # Extract filtered documents from generate_answer tool (PRIORITY)
+            elif tool_name == "generate_answer":
+                print(f"[API] ✨ GENERATE STEP: Creating final answer...")
                 try:
-                    parsed_obs = safe_parse(observation)
-                    if isinstance(parsed_obs, dict):
-                        docs_data = parsed_obs.get("retrieved_docs_data", [])
-                        if docs_data:
-                            referenced_documents.extend(docs_data)
-                            print(
-                                f"[API] Extracted {len(docs_data)} documents from parsed observation"
-                            )
+                    if isinstance(observation, str):
+                        # Try to parse the JSON response from generate_answer
+                        obs_str = str(observation)
+                        
+                        # Look for JSON in the observation string
+                        json_start = obs_str.find('{')
+                        json_end = obs_str.rfind('}') + 1
+                        
+                        if json_start != -1 and json_end > json_start:
+                            json_part = obs_str[json_start:json_end]
+                            try:
+                                parsed_result = json.loads(json_part)
+                                if isinstance(parsed_result, dict) and "filtered_documents" in parsed_result:
+                                    generation_result = parsed_result
+                                    referenced_documents = parsed_result.get("filtered_documents", [])
+                                    print(f"[API] ✅ SUCCESS: Extracted {len(referenced_documents)} filtered documents from generate_answer")
+                                    print(f"[API] 📊 Generation stats: {parsed_result.get('total_documents_processed', 0)} processed → {parsed_result.get('documents_used', 0)} used")
+                                    
+                                    # Log the filtered documents for verification
+                                    for idx, doc in enumerate(referenced_documents):
+                                        source = doc.get('source', 'Unknown')
+                                        print(f"[API] 📄 Filtered Doc {idx+1}: {source}")
+                                    
+                                    # FORCE USE ONLY FILTERED DOCUMENTS
+                                    print(f"[API] 🔒 FORCING use of filtered documents only!")
+                                    break  # Exit loop early to prevent fallback
+                                else:
+                                    print(f"[API] ⚠️ Generate result missing 'filtered_documents' key")
+                                    print(f"[API] 🔍 Available keys: {list(parsed_result.keys()) if isinstance(parsed_result, dict) else 'Not a dict'}")
+                            except json.JSONDecodeError:
+                                print(f"[API] ⚠️ Could not parse JSON from generate_answer")
+                        else:
+                            print(f"[API] ⚠️ No JSON found in generate_answer observation")
+                    else:
+                        print(f"[API] ⚠️ Generate observation is not string: {type(observation)}")
+                        print(f"[API] 🔍 Observation value: {str(observation)[:100]}...")
                 except Exception as parse_error:
-                    print(f"[API] ⚠️ Failed to parse observation: {parse_error}")
+                    print(f"[API] ❌ Failed to parse generate_answer result: {parse_error}")
+                    print(f"[API] 🔍 Raw observation preview: {str(observation)[:200]}...")
 
-        # Remove duplicate documents based on content hash
-        unique_docs = []
-        seen_hashes = set()
-        for doc in referenced_documents:
-            content_hash = hash(str(doc.get("content", "")))
-            if content_hash not in seen_hashes:
-                unique_docs.append(doc)
-                seen_hashes.add(content_hash)
+        print(f"\n[API] 📊 EXTRACTION SUMMARY:")
+        print(f"[API] 🔍 Total search documents found: {len(all_search_documents)}")
+        print(f"[API] ✨ Filtered documents extracted: {len(referenced_documents)}")
 
-        referenced_documents = unique_docs
-        print(
-            f"[API] Final document count after deduplication: {len(referenced_documents)}"
-        )
+        # STRICT: Only use filtered documents, no fallback to search results
+        if not referenced_documents:
+            print(f"[API] ❌ CRITICAL: No filtered documents found from generate_answer!")
+            print(f"[API] 🔍 This indicates generate_answer tool failed to run properly")
+            
+            # Try to extract from raw agent output as emergency fallback
+            emergency_docs = []
+            for _, observation in result.intermediate_steps:
+                obs_str = str(observation)
+                if '"filtered_documents"' in obs_str:
+                    try:
+                        # Find the JSON part
+                        start = obs_str.find('{')
+                        end = obs_str.rfind('}') + 1
+                        if start != -1 and end > start:
+                            json_part = obs_str[start:end]
+                            parsed = json.loads(json_part)
+                            if 'filtered_documents' in parsed:
+                                emergency_docs = parsed['filtered_documents']
+                                print(f"[API] 🚨 EMERGENCY: Found {len(emergency_docs)} documents in raw output")
+                                break
+                    except:
+                        continue
+            
+            if emergency_docs:
+                referenced_documents = emergency_docs
+            else:
+                print(f"[API] 💥 SEVERE ERROR: No filtered documents found anywhere!")
+                referenced_documents = []
+        else:
+            print(f"[API] ✅ SUCCESS: Using {len(referenced_documents)} smart filtered documents")
 
         # Track document retrieval for standard execution
         if LANGFUSE_ENABLED and trace:

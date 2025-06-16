@@ -314,7 +314,7 @@ class RAGTracker:
         PRICING = {
             # OpenAI Pricing (per 1K tokens)
             "gpt-4o": {"input": 0.00250, "output": 0.01000},
-            "gpt-4o-mini": {"input": 0.000150, "output": 0.000600},
+            "gpt-4.1-mini": {"input": 0.000150, "output": 0.000600},
             "gpt-4.1-mini": {"input": 0.000150, "output": 0.000600},
             "gpt-4-turbo": {"input": 0.01000, "output": 0.03000},
             "gpt-3.5-turbo": {"input": 0.000500, "output": 0.001500},

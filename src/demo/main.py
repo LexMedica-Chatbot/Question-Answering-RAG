@@ -51,7 +51,7 @@ vector_store = SupabaseVectorStore(
 retriever = vector_store.as_retriever(search_kwargs={"k": 4})
 
 # Language model
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-4.1-mini")
 
 # Conversational Retrieval Chain
 qa_chain = ConversationalRetrievalChain.from_llm(
