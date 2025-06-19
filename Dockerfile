@@ -34,7 +34,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 
 # Perintah start menggunakan Enhanced Multi-Step RAG
-CMD ["sh", "-c", "python -m uvicorn src.api.multi_api_refactored:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]
+CMD ["sh", "-c", "python -m uvicorn src.api.multi_api:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]
 
 # # Perintah start menggunakan Basic RAG Pipeline
 # CMD ["sh", "-c", "uvicorn src.api.simple_api:app --host 0.0.0.0 --port ${PORT:-8080}"] 

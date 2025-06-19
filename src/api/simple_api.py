@@ -29,11 +29,10 @@ load_dotenv()
 # Modern RAG Observability (No Cache - Simple API)
 try:
     import sys
+
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    from observability.rag_tracker import (
-        rag_tracker, APIType, ExecutionMode
-    )
-    
+    from observability.rag_tracker import rag_tracker, APIType, ExecutionMode
+
     LANGFUSE_ENABLED = rag_tracker.enabled
     print(f"✅ RAG Tracker: {'enabled' if LANGFUSE_ENABLED else 'disabled'}")
     print(f"ℹ️  Cache: disabled (Simple API doesn't use cache)")
@@ -61,8 +60,8 @@ async def verify_api_key(
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Sistem RAG Dokumen Hukum",
-    description="API sederhana untuk sistem RAG dokumen hukum Indonesia",
+    title="Pure RAG API - Sistem Dokumen Hukum",
+    description="API Pure RAG untuk sistem dokumentasi hukum Indonesia (tanpa history processing)",
     version="1.0.0",
 )
 
@@ -168,7 +167,6 @@ Anda adalah asisten informasi dokumen hukum kesehatan, bukan penasihat medis ata
 
 Jawaban Anda harus faktual, akurat, dan hanya berdasarkan pada dokumen yang tersedia.""",
         ),
-        ("system", "{history}"),  # NEW: placeholder untuk riwayat yang diformat
         ("human", "{question}"),
         (
             "system",
@@ -335,7 +333,7 @@ def find_document_links(doc_names, embedding_model="large"):
 class ChatRequest(BaseModel):
     query: str
     embedding_model: Literal["small", "large"] = "large"
-    previous_responses: List[Any] = []  # Bisa string, tuple/list dua elemen, atau dict
+    # previous_responses: List[Any] = []  # DIHAPUS: Pure RAG tanpa history
 
 
 class ChatResponse(BaseModel):
@@ -434,46 +432,14 @@ def extract_document_info(docs):
     return document_info
 
 
-# Fungsi untuk format chat history menjadi prompt
-def format_chat_history(previous_responses, query):
-    """Format riwayat chat untuk konteks tambahan"""
-    if not previous_responses:
-        return ""
-
-    # Batasi jumlah respons sebelumnya yang digunakan (misal: 3 terakhir)
-    limited_responses = (
-        previous_responses[-3:] if len(previous_responses) > 3 else previous_responses
-    )
-
-    history = "\n\nBerikut adalah riwayat percakapan sebelumnya:\n\n"
-    for i, response in enumerate(limited_responses):
-        history += f"Respons sebelumnya #{i+1}:\n{response}\n\n"
-
-    history += f"Pertanyaan saat ini: {query}"
-    return history
+# DIHAPUS: Pure RAG tanpa history processing
+# format_chat_history() dan to_str_history() tidak diperlukan
 
 
-def to_str_history(prev):
-    if not prev:
-        return []
-    if isinstance(prev[0], dict):
-        # Format: "Pertanyaan: ...\nJawaban: ..."
-        return [
-            f"Pertanyaan: {d.get('query', '')}\nJawaban: {d.get('answer', '')}"
-            for d in prev
-        ]
-    if isinstance(prev[0], (list, tuple)) and len(prev[0]) == 2:
-        # Format: "Pertanyaan: ...\nJawaban: ..."
-        return [f"Pertanyaan: {q}\nJawaban: {a}" for q, a in prev]
-    if isinstance(prev[0], str):
-        return prev
-    return []
-
-
-# Create RAG chain
+# Create Pure RAG chain (tanpa history)
 def create_rag_chain(embedding_model="large"):
-    """Create a RAG chain using the specified model"""
-    print(f"\n[DEBUG] Creating RAG chain with model: {embedding_model}")
+    """Create a pure RAG chain using the specified model (no history processing)"""
+    print(f"\n[DEBUG] Creating pure RAG chain with model: {embedding_model}")
 
     try:
         # Get vector store for the specified model
@@ -484,23 +450,21 @@ def create_rag_chain(embedding_model="large"):
         retriever = vector_store.as_retriever(search_kwargs={"k": 4})
         print("[DEBUG] Retriever created successfully")
 
-        # Create RAG chain dengan pemrosesan context yang diubah
+        # Create PURE RAG chain - langsung query → retrieval → generation
         rag_chain = (
             {
-                # ambil hanya combined_query → retriever → format_docs
-                "context": itemgetter("combined_query") | retriever | format_docs,
-                "history": itemgetter("history"),  # tetap
-                "question": itemgetter("question"),  # yang asli user ketik
+                "context": retriever | format_docs,  # langsung dari query
+                "question": RunnablePassthrough(),  # query asli
             }
             | custom_prompt
             | llm
             | StrOutputParser()
         )
-        print("[DEBUG] RAG chain created successfully")
+        print("[DEBUG] Pure RAG chain created successfully")
 
         return rag_chain, retriever, EMBEDDING_CONFIG[embedding_model]["model"]
     except Exception as e:
-        print(f"[ERROR] Failed to create RAG chain: {str(e)}")
+        print(f"[ERROR] Failed to create pure RAG chain: {str(e)}")
         raise
 
 
@@ -515,9 +479,9 @@ async def chat(request: ChatRequest):
 
     try:
         start_time = time.time()  # Tambahkan waktu mulai
-        
+
         # Note: Simple API doesn't use cache - always processes fresh requests
-        
+
         # Start RAG tracking session
         trace = None
         if LANGFUSE_ENABLED:
@@ -525,13 +489,13 @@ async def chat(request: ChatRequest):
                 query=request.query,
                 api_type=APIType.SIMPLE,
                 execution_mode=ExecutionMode.STANDARD,
-                metadata={"embedding_model": request.embedding_model}
+                metadata={"embedding_model": request.embedding_model},
             )
-        
+
         print(f"[DEBUG] Request details:")
         print(f"- Query: {request.query}")
         print(f"- Embedding model: {request.embedding_model}")
-        print(f"- Previous responses: {len(request.previous_responses)}")
+        print(f"- Pure RAG: No history processing")
         print(f"- RAG Tracker: {'enabled' if trace else 'disabled'}")
 
         # Validasi model
@@ -572,29 +536,30 @@ async def chat(request: ChatRequest):
                 status_code=500, detail=f"Error saat membuat RAG chain: {str(e)}"
             )
 
-        # Konversi previous_responses ke string jika perlu
-        prev_str = to_str_history(request.previous_responses)
-        # Format riwayat chat dan gabungkan dengan query untuk retrieval
-        history_text = format_chat_history(prev_str, request.query)
-        combined_query = f"{history_text} " if history_text else ""
-        combined_query += request.query
+        # PURE RAG: Langsung gunakan query tanpa history processing
+        # Tidak ada kombinasi dengan history atau previous responses
 
-        # Note: Simple API doesn't need embeddings for caching
-
-        # Get relevant documents using combined query
+        # Get relevant documents using direct query
         try:
-            docs = retriever.invoke(combined_query)
+            docs = retriever.invoke(request.query)
             print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
-            
+
             # Track document retrieval
             if LANGFUSE_ENABLED and trace:
                 rag_tracker.track_document_retrieval(
                     trace=trace,
-                    query=combined_query,
+                    query=request.query,
                     embedding_model=model_name,
                     num_docs=len(docs),
                     api_type=APIType.SIMPLE,
-                    docs=[doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content for doc in docs[:2]]
+                    docs=[
+                        (
+                            doc.page_content[:200] + "..."
+                            if len(doc.page_content) > 200
+                            else doc.page_content
+                        )
+                        for doc in docs[:2]
+                    ],
                 )
 
             if docs:
@@ -622,20 +587,18 @@ async def chat(request: ChatRequest):
             print(f"[ERROR] Document info extraction failed: {str(e)}")
             referenced_documents = []  # Fallback to empty list
 
-        # Generate answer using chain with history
+        # Generate answer using pure RAG (tanpa history)
         try:
-            chain_input = {
-                "question": request.query,
-                "history": history_text,  # hasil format_chat_history(...)
-                "combined_query": combined_query,  # untuk retriever
-            }
-            answer = rag_chain.invoke(chain_input)
-            print("[DEBUG] Successfully generated answer")
-            
+            # PURE RAG: Langsung invoke dengan query saja
+            answer = rag_chain.invoke(request.query)
+            print("[DEBUG] Successfully generated answer using pure RAG")
+
             # Track LLM call (approximate token usage)
-            estimated_input_tokens = len(f"{history_text} {request.query} {format_docs(docs)}".split()) * 1.3
+            estimated_input_tokens = (
+                len(f"{request.query} {format_docs(docs)}".split()) * 1.3
+            )
             estimated_output_tokens = len(answer.split()) * 1.3
-            
+
             if LANGFUSE_ENABLED and trace:
                 rag_tracker.track_llm_generation(
                     trace=trace,
@@ -646,10 +609,12 @@ async def chat(request: ChatRequest):
                     usage={
                         "prompt_tokens": int(estimated_input_tokens),
                         "completion_tokens": int(estimated_output_tokens),
-                        "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
-                    }
+                        "total_tokens": int(
+                            estimated_input_tokens + estimated_output_tokens
+                        ),
+                    },
                 )
-            
+
         except Exception as e:
             print(f"[ERROR] Answer generation failed: {str(e)}")
             raise HTTPException(
@@ -661,22 +626,30 @@ async def chat(request: ChatRequest):
             "model": model_name,
             "table": table_name,
             "dimensions": embedding_dimensions,
+            "type": "pure_rag",  # Menandakan ini adalah Pure RAG
+            "history_processing": False,  # Tidak ada history processing
         }
 
         # Hitung waktu pemrosesan
         end_time = time.time()
         processing_time_ms = int((end_time - start_time) * 1000)
-        
+
         # Calculate estimated cost
-        estimated_cost = rag_tracker._calculate_cost(
-            "gpt-4.1-mini", 
-            {
-                "prompt_tokens": int(estimated_input_tokens),
-                "completion_tokens": int(estimated_output_tokens),
-                "total_tokens": int(estimated_input_tokens + estimated_output_tokens)
-            }
-        ) if LANGFUSE_ENABLED else 0.0
-        
+        estimated_cost = (
+            rag_tracker._calculate_cost(
+                "gpt-4.1-mini",
+                {
+                    "prompt_tokens": int(estimated_input_tokens),
+                    "completion_tokens": int(estimated_output_tokens),
+                    "total_tokens": int(
+                        estimated_input_tokens + estimated_output_tokens
+                    ),
+                },
+            )
+            if LANGFUSE_ENABLED
+            else 0.0
+        )
+
         # Finalize RAG tracking
         if LANGFUSE_ENABLED and trace:
             rag_tracker.finalize_session(
@@ -685,9 +658,9 @@ async def chat(request: ChatRequest):
                 api_type=APIType.SIMPLE,
                 execution_mode=ExecutionMode.STANDARD,
                 processing_time_ms=processing_time_ms,
-                estimated_cost=estimated_cost
+                estimated_cost=estimated_cost,
             )
-        
+
         # Note: Simple API doesn't cache responses - always fresh processing
 
         print("[DEBUG] Request completed successfully")
@@ -715,10 +688,12 @@ async def chat(request: ChatRequest):
 async def health_check():
     return {"status": "healthy"}
 
+
 @app.get("/monitoring/health")
 async def monitoring_health():
     """Basic health check endpoint for monitoring"""
     return {"status": "healthy", "timestamp": time.time()}
+
 
 @app.get("/monitoring/health/detailed")
 async def monitoring_health_detailed():
@@ -729,10 +704,10 @@ async def monitoring_health_detailed():
         "services": {
             "api": "operational",
             "cache": "disabled",  # Simple API doesn't use cache
-            "database": "operational"  # Assuming Pinecone is working if API works
+            "database": "operational",  # Assuming Pinecone is working if API works
         },
         "system": "Simple RAG",
-        "uptime": time.time()  # Simple uptime indicator
+        "uptime": time.time(),  # Simple uptime indicator
     }
 
 
@@ -749,46 +724,54 @@ async def available_models():
         }
     }
 
+
 # RAG observability endpoint
 @app.get("/api/observability")
 async def get_observability_status():
     """Get RAG observability and cache status"""
     from cache.smart_cache import get_cache_stats
-    
+
     response = {
-        "tracking": rag_tracker.get_status() if LANGFUSE_ENABLED else {"enabled": False},
-        "cache": {"enabled": False, "reason": "Simple API designed for direct processing without cache"},
+        "tracking": (
+            rag_tracker.get_status() if LANGFUSE_ENABLED else {"enabled": False}
+        ),
+        "cache": {
+            "enabled": False,
+            "reason": "Simple API designed for direct processing without cache",
+        },
         "api_type": "simple_api",
         "features": [
             "Direct processing (no cache)",
             "Cost tracking per request",
             "Performance monitoring",
             "API-specific tracing",
-            "Fast response times"
-        ]
+            "Fast response times",
+        ],
     }
-    
+
     if LANGFUSE_ENABLED:
-        response["tracking"].update({
-            "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
-            "metrics_tracked": {
-                "cost_per_request": "USD cost for LLM calls",
-                "token_usage": "Input/output tokens for each request",
-                "document_retrieval": "Number of documents retrieved",
-                "response_time": "End-to-end processing time",
-                "embedding_model": "Which embedding model used"
+        response["tracking"].update(
+            {
+                "setup_instructions": "Visit https://cloud.langfuse.com to see your dashboard",
+                "metrics_tracked": {
+                    "cost_per_request": "USD cost for LLM calls",
+                    "token_usage": "Input/output tokens for each request",
+                    "document_retrieval": "Number of documents retrieved",
+                    "response_time": "End-to-end processing time",
+                    "embedding_model": "Which embedding model used",
+                },
             }
-        })
+        )
     else:
         response["setup_instructions"] = [
             "1. Get free account at https://cloud.langfuse.com",
             "2. Create new project and get API keys",
             "3. Set environment variables:",
             "   - LANGFUSE_PUBLIC_KEY=pk-...",
-            "   - LANGFUSE_SECRET_KEY=sk-...", 
-            "4. Restart application"
+            "   - LANGFUSE_SECRET_KEY=sk-...",
+            "4. Restart application",
         ]
-    
+
     return response
 
 

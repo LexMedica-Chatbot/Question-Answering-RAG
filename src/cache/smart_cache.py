@@ -22,9 +22,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Langchain imports for embeddings
 from langchain_openai import OpenAIEmbeddings
 
+
 @dataclass
 class CacheEntry:
     """Cache entry structure with metadata"""
+
     query: str
     answer: str
     timestamp: float
@@ -34,31 +36,32 @@ class CacheEntry:
     embedding: Optional[List[float]] = None
     access_count: int = 0
     last_accessed: float = 0.0
-    
+
     def is_expired(self) -> bool:
         """Check if cache entry has expired"""
         return time.time() > (self.timestamp + self.ttl_seconds)
-    
+
     def is_similar(self, query_embedding: List[float], threshold: float = 0.80) -> bool:
         """Check if query is similar to cached entry using cosine similarity"""
         if not self.embedding or not query_embedding:
             return False
-        
+
         # Calculate cosine similarity
         dot_product = np.dot(self.embedding, query_embedding)
         norm_a = np.linalg.norm(self.embedding)
         norm_b = np.linalg.norm(query_embedding)
-        
+
         if norm_a == 0 or norm_b == 0:
             return False
-        
+
         similarity = dot_product / (norm_a * norm_b)
         return similarity >= threshold
-    
+
     def update_access(self):
         """Update access statistics"""
         self.access_count += 1
         self.last_accessed = time.time()
+
 
 # Utility function for safe parsing
 def safe_parse(payload: str) -> Dict[str, Any]:
@@ -73,6 +76,7 @@ def safe_parse(payload: str) -> Dict[str, Any]:
         except Exception as e:
             print(f"[WARNING] Parse failed: {e}")
             return {}  # ③ terakhir, kosong
+
 
 class SmartRAGCache:
     """Multi-level caching system untuk RAG responses"""
@@ -117,8 +121,8 @@ class SmartRAGCache:
 
         # Cache settings
         self.similarity_threshold = 0.85
-        self.exact_ttl = 3600  # 1 hour
-        self.semantic_ttl = 3600  # 1 hour
+        self.exact_ttl = 21600  # 6 hours
+        self.semantic_ttl = 21600  # 6 hours
         self.document_ttl = 7200  # 2 hours
 
         # In-memory fallback untuk embeddings
@@ -205,7 +209,7 @@ class SmartRAGCache:
         try:
             # Convert response to JSON-serializable format safely
             def make_serializable(obj):
-                if hasattr(obj, 'dict'):  # Pydantic models
+                if hasattr(obj, "dict"):  # Pydantic models
                     return obj.dict()
                 elif isinstance(obj, dict):
                     return {k: make_serializable(v) for k, v in obj.items()}
@@ -215,9 +219,9 @@ class SmartRAGCache:
                     return obj
                 else:
                     return str(obj)
-            
+
             safe = make_serializable(response)
-            
+
             # Level 1: Exact cache
             exact_key = f"exact:{self._get_query_hash(query, model)}"
             self.redis_client.setex(exact_key, self.exact_ttl, json.dumps(safe))
@@ -289,7 +293,7 @@ class SmartRAGCache:
             "small": {"model": "text-embedding-3-small", "table": "documents_small"},
             "large": {"model": "text-embedding-3-large", "table": "documents"},
         }
-        
+
         if embedding_model not in EMBEDDING_CONFIG:
             raise ValueError(f"Model embedding tidak valid: {embedding_model}")
 
@@ -346,36 +350,41 @@ class SmartRAGCache:
 
             # Clear Redis cache
             self.redis_client.flushall()
-            
+
             # Clear in-memory cache
             self.embedding_cache.clear()
-            
+
             print("🧹 Multi-Step RAG cache cleared successfully")
-            
+
         except Exception as e:
             print(f"⚠️ Failed to clear cache: {e}")
 
+
 # Initialize global cache system - ONLY for Multi-Step RAG
 cache_system = SmartRAGCache()
+
 
 # Convenience functions - Only support Multi API
 def get_cached_response(
     query: str,
     api_type: str = "multi",
     query_embedding: Optional[List[float]] = None,
-    metadata: Dict[str, Any] = None
+    metadata: Dict[str, Any] = None,
 ) -> Optional[Tuple[str, Dict[str, Any]]]:
     """Get cached response - ONLY for Multi API"""
-    
+
     if api_type != "multi":
-        print(f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache")
+        print(
+            f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache"
+        )
         return None
-    
+
     # Use the legacy cache system for now
     embedding_model = metadata.get("embedding_model", "large") if metadata else "large"
-    
+
     try:
         import asyncio
+
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If we're in an async context, we need to handle this differently
@@ -386,11 +395,15 @@ def get_cached_response(
                 cache_system.get_cached_response(query, embedding_model)
             )
             if cached:
-                return cached.get("answer", ""), {"cache_hit": True, "cache_type": "legacy_redis"}
+                return cached.get("answer", ""), {
+                    "cache_hit": True,
+                    "cache_type": "legacy_redis",
+                }
     except Exception as e:
         print(f"[CACHE] Error in async cache lookup: {e}")
-    
+
     return None
+
 
 def cache_response(
     query: str,
@@ -398,19 +411,22 @@ def cache_response(
     api_type: str = "multi",
     query_embedding: Optional[List[float]] = None,
     metadata: Dict[str, Any] = None,
-    ttl: Optional[int] = None
+    ttl: Optional[int] = None,
 ):
     """Cache response - ONLY for Multi API"""
-    
+
     if api_type != "multi":
-        print(f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache")
+        print(
+            f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache"
+        )
         return
-    
+
     # Use the legacy cache system
     embedding_model = metadata.get("embedding_model", "large") if metadata else "large"
-    
+
     try:
         import asyncio
+
         loop = asyncio.get_event_loop()
         if loop.is_running():
             # If we're in an async context, we need to handle this differently
@@ -419,8 +435,10 @@ def cache_response(
         else:
             response_data = {
                 "answer": answer,
-                "referenced_documents": metadata.get("referenced_documents", []) if metadata else [],
-                "model_info": {"cached": False, "model": embedding_model}
+                "referenced_documents": (
+                    metadata.get("referenced_documents", []) if metadata else []
+                ),
+                "model_info": {"cached": False, "model": embedding_model},
             }
             loop.run_until_complete(
                 cache_system.cache_response(query, embedding_model, response_data)
@@ -428,24 +446,28 @@ def cache_response(
     except Exception as e:
         print(f"[CACHE] Error in async cache storage: {e}")
 
+
 def get_cache_stats(api_type: str = "multi") -> Dict[str, Any]:
     """Get cache statistics - ONLY for Multi API"""
-    
+
     if api_type != "multi":
         return {
             "enabled": False,
             "reason": f"{api_type} API doesn't use cache",
-            "cache_policy": "Simple API is designed for direct processing without cache"
+            "cache_policy": "Simple API is designed for direct processing without cache",
         }
-    
+
     return cache_system.get_cache_stats()
+
 
 def clear_cache(api_type: str = "multi"):
     """Clear cache - ONLY for Multi API"""
-    
+
     if api_type != "multi":
-        print(f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache")
+        print(
+            f"⚠️ Cache not available for {api_type} API - only Multi-Step API uses cache"
+        )
         return
-    
+
     cache_system.clear_cache()
     print(f"🧹 Multi-Step RAG cache cleared")

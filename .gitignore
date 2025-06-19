@@ -103,3 +103,5 @@ Thumbs.db
 *.pkl
 *.joblib
 *.model
+
+embedding_comparison_results/
