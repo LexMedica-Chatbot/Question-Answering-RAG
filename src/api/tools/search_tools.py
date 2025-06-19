@@ -55,6 +55,7 @@ def search_documents(
             status = metadata.get("status", "berlaku")
             bagian_dari = metadata.get("bagian_dari", "")
             judul_peraturan = metadata.get("judul_peraturan", "")
+            nomor_halaman = metadata.get("nomor_halaman", "")
 
             # Jika metadata tidak lengkap, coba ekstrak dari konten
             if not all([jenis_peraturan, nomor_peraturan, tahun_peraturan]):
@@ -87,6 +88,7 @@ def search_documents(
                 "judul_peraturan": judul_peraturan,
                 "nomor_peraturan": nomor_peraturan,
                 "tahun_peraturan": tahun_peraturan,
+                "nomor_halaman": nomor_halaman,
             }
 
             # Buat label peraturan untuk ditampilkan di frontend
@@ -160,7 +162,7 @@ async def enhanced_search_documents(
     try:
         # Import parallel_search_documents locally to avoid circular import
         from .parallel_tools import parallel_search_documents
-        
+
         # Execute parallel search
         result = await parallel_search_documents(unique_queries, embedding_model, limit)
         print(
@@ -174,4 +176,4 @@ async def enhanced_search_documents(
         # Fallback to standard search
         return search_documents.invoke(
             {"query": query, "embedding_model": embedding_model, "limit": limit}
-        ) 
+        )

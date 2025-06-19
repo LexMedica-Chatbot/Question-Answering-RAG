@@ -24,6 +24,7 @@ def format_docs(docs):
         status = doc.metadata.get(
             "status", "berlaku"
         )  # Default ke "berlaku" jika tidak ada
+        nomor_halaman = doc.metadata.get("nomor_halaman", "")  # Tambahkan nomor_halaman
 
         # Format dokumen dengan header yang lebih informatif
         if jenis_peraturan and nomor_peraturan and tahun_peraturan:
@@ -32,9 +33,15 @@ def format_docs(docs):
             )
             if tipe_bagian:
                 doc_header += f" {tipe_bagian}"
-            doc_header += f" (Status: {status})"
+            doc_header += f" (Status: {status}"
+            if nomor_halaman:
+                doc_header += f", Hal: {nomor_halaman}"
+            doc_header += ")"
         else:
-            doc_header = f"Dokumen (Status: {status})"
+            doc_header = f"Dokumen (Status: {status}"
+            if nomor_halaman:
+                doc_header += f", Hal: {nomor_halaman}"
+            doc_header += ")"
 
         formatted_docs.append(f"{doc_header}:\n{doc.page_content}\n")
 
@@ -374,4 +381,4 @@ def find_document_links(doc_names, embedding_model="large") -> List[str]:
     print(f"[DEBUG] Referensi dokumen: {doc_names}")
 
     # Return array kosong karena tidak ada mapping hardcoded
-    return [] 
+    return []

@@ -163,7 +163,14 @@ Anda adalah asisten informasi dokumen hukum kesehatan, bukan penasihat medis ata
 5. Jangan pernah berhalusinasi atau membuat informasi yang tidak ada dalam dokumen.
 6. Jika Anda tidak yakin, katakan bahwa informasi tersebut tidak ditemukan dalam dokumen yang tersedia.
 7. JANGAN memberikan saran medis, diagnosa penyakit, atau rekomendasi pengobatan.
-8. Jika ada "riwayat percakapan sebelumnya", gunakan itu sebagai konteks utama untuk memahami "pertanyaan saat ini" dan berikan jawaban yang relevan dengan keseluruhan percakapan.
+
+# INSTRUKSI FORMATTING (WAJIB UNTUK READABILITY):
+- Gunakan **bold formatting** untuk kata-kata PENTING seperti: **nama peraturan**, **pasal**, **definisi kunci**, **status hukum**, **sanksi**, **kewajiban**, **persyaratan**, dll
+- Bold untuk **angka/nominal** penting, **tanggal**, **batas waktu**, **prosedur**, **kriteria**
+- Bold untuk **istilah teknis** dan **konsep hukum** yang penting
+- Bold untuk **nama institusi**, **wewenang**, **tanggung jawab**
+- Contoh formatting: "Berdasarkan **PP No. 28 Tahun 2024 (berlaku)** **Pasal 32**, **definisi kesehatan** adalah..."
+- Contoh: "**Sanksi pidana** berupa **denda maksimal Rp 100 juta** atau **kurungan 1 tahun**"
 
 Jawaban Anda harus faktual, akurat, dan hanya berdasarkan pada dokumen yang tersedia.""",
         ),
@@ -239,9 +246,8 @@ def format_docs(docs):
         nomor_peraturan = doc.metadata.get("nomor_peraturan", "")
         tahun_peraturan = doc.metadata.get("tahun_peraturan", "")
         tipe_bagian = doc.metadata.get("tipe_bagian", "")
-        status = doc.metadata.get(
-            "status", "berlaku"
-        )  # Default ke "berlaku" jika tidak ada
+        status = doc.metadata.get("status", "berlaku")
+        nomor_halaman = doc.metadata.get("nomor_halaman", "")
 
         # Buat header dokumen yang informatif untuk membantu model mengetahui sumbernya
         doc_header = f"Dokumen #{i+1}"
@@ -252,8 +258,11 @@ def format_docs(docs):
             )
             if tipe_bagian:
                 doc_header += f" {tipe_bagian}"
-            # Tambahkan status di header dokumen
-            doc_header += f", Status: {status})"
+            # Tambahkan status dan nomor halaman di header dokumen
+            doc_header += f", Status: {status}"
+            if nomor_halaman:
+                doc_header += f", Hal: {nomor_halaman}"
+            doc_header += ")"
         else:
             doc_header += ")"
 
@@ -366,6 +375,7 @@ def extract_document_info(docs):
             tahun_peraturan = metadata.get("tahun_peraturan", "-")
             tipe_bagian = metadata.get("tipe_bagian", "")
             status = metadata.get("status", "berlaku")
+            nomor_halaman = metadata.get("nomor_halaman", "")
 
             # Buat nama dokumen urutan
             doc_name = f"Dokumen #{i+1}"
@@ -377,7 +387,10 @@ def extract_document_info(docs):
                 )
                 if tipe_bagian:
                     doc_description += f" {tipe_bagian}"
-                doc_description += f" (Status: {status})"
+                doc_description += f" (Status: {status}"
+                if nomor_halaman:
+                    doc_description += f", Hal: {nomor_halaman}"
+                doc_description += ")"
             else:
                 # Coba ekstrak informasi dari content jika metadata kosong
                 content = doc.page_content if hasattr(doc, "page_content") else ""
@@ -400,7 +413,10 @@ def extract_document_info(docs):
                     doc_description = f"{doc_name} (Detail tidak tersedia)"
 
             # Buat source yang konsisten
-            doc_source = f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan} (Status: {status})"
+            doc_source = f"{jenis_peraturan} No. {nomor_peraturan}/{tahun_peraturan} (Status: {status}"
+            if nomor_halaman:
+                doc_source += f", Hal: {nomor_halaman}"
+            doc_source += ")"
             if doc_source.startswith("Tidak Diketahui"):
                 doc_source = doc_description
 
