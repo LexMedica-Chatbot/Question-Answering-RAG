@@ -90,7 +90,9 @@ EMBEDDING_CONFIG = {
 }
 
 # Initialize LLM
-llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0, streaming=True)
+from .utils.config_manager import MODELS
+
+llm = ChatOpenAI(**{**MODELS["MAIN"], "streaming": True, "temperature": 0})
 
 # Create the custom prompt
 custom_prompt = ChatPromptTemplate.from_messages(
@@ -618,7 +620,7 @@ async def chat(request: ChatRequest):
             if LANGFUSE_ENABLED and trace:
                 rag_tracker.track_llm_generation(
                     trace=trace,
-                    model="gpt-4.1-mini",
+                    model=MODELS["MAIN"]["model"],
                     input_messages=[{"role": "user", "content": request.query}],
                     response=answer,
                     api_type=APIType.SIMPLE,
@@ -653,7 +655,7 @@ async def chat(request: ChatRequest):
         # Calculate estimated cost
         estimated_cost = (
             rag_tracker._calculate_cost(
-                "gpt-4.1-mini",
+                MODELS["MAIN"]["model"],
                 {
                     "prompt_tokens": int(estimated_input_tokens),
                     "completion_tokens": int(estimated_output_tokens),

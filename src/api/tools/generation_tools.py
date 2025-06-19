@@ -28,7 +28,9 @@ def extract_metadata_with_prompt(source: str, content: str) -> Dict[str, str]:
         return {"status": "tidak diketahui", "jenis_peraturan": "tidak diketahui"}
 
     try:
-        llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.1, max_tokens=200)
+        llm = ChatOpenAI(
+            **{**MODELS["GENERATOR"], "temperature": 0.1, "max_tokens": 200}
+        )
 
         prompt = f"""Ekstrak informasi metadata dari teks hukum berikut:
 
@@ -251,6 +253,7 @@ def generate_answer(
             print(f"[WARNING] Document {i+1} is not a dict: {type(doc)}")
 
     doc_list = standardized_docs
+    original_docs = list(doc_list)  # Simpan salinan sebelum filtering lanjutan
 
     # Debug: log received documents
     print(f"\n[DEBUG] 📋 Received {len(doc_list)} documents for filtering:")
@@ -274,7 +277,44 @@ def generate_answer(
 
     # SMART FILTERING: Filter based on evaluation result and sort by relevance
     if query and evaluation_result:
-        doc_list = filter_documents_by_evaluation(doc_list, evaluation_result, query)
+        try:
+            parsed_eval = safe_parse(evaluation_result)
+            if isinstance(parsed_eval, str):
+                raise ValueError("Evaluation result bukan JSON")
+            per_doc_scores = {
+                item["index"]: item for item in parsed_eval.get("per_doc_scores", [])
+            }
+            # Urutkan dokumen berdasarkan skor (1 > 0.5 > 0) lalu relevansi
+            scored_docs = []
+            for idx, doc in enumerate(doc_list):
+                eval_info = per_doc_scores.get(idx, {"score": 0})
+                eval_score = eval_info.get("score", 0)
+                relevance_score = calculate_document_relevance(doc, query)
+                # Tuple (-eval_score) agar 1 lebih dulu, lalu relevance
+                scored_docs.append(((-eval_score, -relevance_score), doc))
+
+            scored_docs.sort(key=lambda x: x[0])
+            doc_list = [
+                doc
+                for _, doc in scored_docs
+                if per_doc_scores.get(doc_list.index(doc), {"score": 0}).get("score", 0)
+                >= 0.5
+            ]
+
+            # Fallback jika setelah filter tidak ada dokumen memadai
+            if not doc_list:
+                # Gunakan relevansi tertinggi dari dokumen asli
+                scored_by_rel = [
+                    (calculate_document_relevance(doc, query), doc)
+                    for doc in original_docs
+                ]
+                scored_by_rel.sort(key=lambda x: x[0], reverse=True)
+                doc_list = [doc for score, doc in scored_by_rel[:3]]
+        except Exception as parse_err:
+            print(f"[WARNING] Tidak dapat parse evaluation_result JSON: {parse_err}")
+            doc_list = filter_documents_by_evaluation(
+                doc_list, evaluation_result, query
+            )
     else:
         # Fallback: sort by relevance if no evaluation result
         if query:
@@ -386,7 +426,9 @@ REFERENSI MAPPING:
 JAWABAN (dengan sitasi yang tepat dan formatting bold untuk kata-kata penting):"""
 
     try:
-        llm = ChatOpenAI(model="gpt-4.1-mini", temperature=0.3, max_tokens=1200)
+        llm = ChatOpenAI(
+            **{**MODELS["GENERATOR"], "temperature": 0.3, "max_tokens": 1200}
+        )
 
         response = llm.invoke(prompt)
         answer = response.content.strip()

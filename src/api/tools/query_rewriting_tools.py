@@ -283,9 +283,8 @@ def smart_query_preprocessing(
         print(f"[SMART PREPROCESSING] 📝 Current query: {current_query}")
         print(f"[SMART PREPROCESSING] 📚 Chat history available: {bool(chat_history)}")
 
-        # If no explicit chat_history provided, try to get it from agent context
+        # Fallback untuk chat_history dari agent context (dipertahankan)
         if not chat_history:
-            # Try to access agent context for history_summary
             try:
                 import inspect
 
@@ -293,43 +292,23 @@ def smart_query_preprocessing(
                 while frame:
                     if "history_summary" in frame.f_locals:
                         chat_history = frame.f_locals["history_summary"]
-                        print(
-                            f"[SMART PREPROCESSING] 🔍 Found history_summary in context: {bool(chat_history)}"
-                        )
                         break
                     frame = frame.f_back
-            except Exception as e:
-                print(f"[SMART PREPROCESSING] ⚠️ Could not access agent context: {e}")
+            except Exception:
+                pass
 
-        # Step 1: Analyze context dependency
-        context_analysis = analyze_query_context_dependency.func(
-            current_query, chat_history
+        # ===== Selalu lakukan query rewriting (tidak lagi bergantung pada context analysis) =====
+        processed_query = rewrite_query_with_history.func(
+            current_query, chat_history, previous_responses
         )
-
-        # Step 2: Decide on processing strategy
-        if context_analysis["needs_rewriting"] and chat_history:
-            # Perform query rewriting
-            print(f"[SMART PREPROCESSING] 🔄 Performing query rewriting...")
-            processed_query = rewrite_query_with_history.func(
-                current_query, chat_history, previous_responses
-            )
-            processing_method = "rewritten"
-        else:
-            # Simple enhancement
-            print(f"[SMART PREPROCESSING] ✨ Performing query enhancement...")
-            processed_query = f"{current_query} hukum kesehatan Indonesia"
-            processing_method = "enhanced"
-
-        # Step 3: Final quality check
-        if len(processed_query.strip()) < len(current_query.strip()):
-            processed_query = current_query  # Fallback to original
-            processing_method = "original"
+        processing_method = "rewritten"
 
         result = {
             "original_query": current_query,
             "processed_query": processed_query,
             "processing_method": processing_method,
-            "context_analysis": context_analysis,
+            # Tetap kembalikan context_analysis kosong agar kompatibel dengan caller lama
+            "context_analysis": {},
             "improvement_ratio": (
                 len(processed_query) / len(current_query) if current_query else 1.0
             ),
@@ -339,9 +318,6 @@ def smart_query_preprocessing(
         print(f"  - Method: {processing_method}")
         print(f"  - Original: {current_query}")
         print(f"  - Processed: {processed_query}")
-        print(f"  - Dependency score: {context_analysis['dependency_score']:.2f}")
-        print(f"  - Needs rewriting: {context_analysis['needs_rewriting']}")
-
         return result
 
     except Exception as e:
@@ -350,7 +326,7 @@ def smart_query_preprocessing(
             "original_query": current_query,
             "processed_query": current_query,
             "processing_method": "error_fallback",
-            "context_analysis": {"needs_rewriting": False},
+            "context_analysis": {},
             "improvement_ratio": 1.0,
         }
 
@@ -380,39 +356,17 @@ def smart_query_preprocessing_with_history(
             f"[SMART PREPROCESSING WITH HISTORY] 📚 History summary: {history_summary[:100] if history_summary else 'None'}..."
         )
 
-        # Step 1: Analyze context dependency
-        context_analysis = analyze_query_context_dependency.func(
-            current_query, history_summary
+        # ===== Langsung lakukan query rewriting =====
+        processed_query = rewrite_query_with_history.func(
+            current_query, history_summary, previous_responses
         )
-
-        # Step 2: Decide on processing strategy
-        if context_analysis["needs_rewriting"] and history_summary:
-            # Perform query rewriting
-            print(
-                f"[SMART PREPROCESSING WITH HISTORY] 🔄 Performing query rewriting..."
-            )
-            processed_query = rewrite_query_with_history.func(
-                current_query, history_summary, previous_responses
-            )
-            processing_method = "rewritten"
-        else:
-            # Simple enhancement
-            print(
-                f"[SMART PREPROCESSING WITH HISTORY] ✨ Performing query enhancement..."
-            )
-            processed_query = f"{current_query} hukum kesehatan Indonesia"
-            processing_method = "enhanced"
-
-        # Step 3: Final quality check
-        if len(processed_query.strip()) < len(current_query.strip()):
-            processed_query = current_query  # Fallback to original
-            processing_method = "original"
+        processing_method = "rewritten"
 
         result = {
             "original_query": current_query,
             "processed_query": processed_query,
             "processing_method": processing_method,
-            "context_analysis": context_analysis,
+            "context_analysis": {},
             "improvement_ratio": (
                 len(processed_query) / len(current_query) if current_query else 1.0
             ),
@@ -422,9 +376,6 @@ def smart_query_preprocessing_with_history(
         print(f"  - Method: {processing_method}")
         print(f"  - Original: {current_query}")
         print(f"  - Processed: {processed_query}")
-        print(f"  - Dependency score: {context_analysis['dependency_score']:.2f}")
-        print(f"  - Needs rewriting: {context_analysis['needs_rewriting']}")
-
         return result
 
     except Exception as e:
@@ -433,6 +384,6 @@ def smart_query_preprocessing_with_history(
             "original_query": current_query,
             "processed_query": current_query,
             "processing_method": "error_fallback",
-            "context_analysis": {"needs_rewriting": False},
+            "context_analysis": {},
             "improvement_ratio": 1.0,
         }

@@ -58,9 +58,12 @@ TUGAS ANDA:
 
 ATURAN WAJIB (MANDATORY RULES):
 1. 🔍 STEP 1 - SEARCH: Selalu mulai dengan `search_documents` untuk mencari dokumen relevan dengan query yang spesifik
-2. 📊 STEP 2 - EVALUATE: Gunakan `evaluate_documents` untuk menilai kualitas dokumen yang ditemukan  
+2. �� STEP 2 - EVALUATE: Panggil `evaluate_documents` dengan **SELURUH** `search_result['retrieved_docs_data']` (jangan subset)  
 3. 🔧 STEP 3 - REFINE (jika perlu): Jika dokumen kurang memadai, gunakan `refine_query` SEKALI saja lalu `search_documents` lagi
-4. ✨ STEP 4 - GENERATE: Gunakan `generate_answer` dengan HANYA dokumen yang paling relevan (maksimal 3 dokumen)
+4. ✨ STEP 4 - GENERATE: Gunakan `generate_answer` dengan parameter:
+   • documents = search_result['retrieved_docs_data']  
+   • evaluation_result = evaluation  (JSON lengkap dari previous step)  
+   Tool akan otomatis memilih & mererank dokumen relevan (top 3)
 
 ATURAN SELEKSI DOKUMEN:
 - Hanya pilih dokumen yang BENAR-BENAR menjawab pertanyaan
@@ -147,7 +150,7 @@ def get_agent_executor():
 WORKFLOW ENHANCED DENGAN QUERY REWRITING:
 1. 🧠 PREPROCESS: Gunakan smart_query_preprocessing_with_history untuk menganalisis dan memperbaiki query berdasarkan history_summary
 2. 🔍 SEARCH: Gunakan search_documents dengan query yang sudah diproses
-3. 📊 EVALUATE: Gunakan evaluate_documents untuk menilai kualitas dokumen
+3. 📊 EVALUATE: Panggil `evaluate_documents` dengan **SELURUH** `search_result['retrieved_docs_data']` (jangan subset)  
 4. ✨ GENERATE: Gunakan generate_answer untuk membuat jawaban final
 
 ATURAN PENTING:
@@ -167,8 +170,8 @@ INSTRUKSI DATA PASSING:
 CONTOH WORKFLOW:
 1. preprocessing_result = smart_query_preprocessing_with_history(current_query="Jadi boleh/engga?", history_summary="{history_summary}", previous_responses={previous_responses})
 2. search_result = search_documents(query=preprocessing_result['processed_query'])
-3. evaluation = evaluate_documents(documents=search_result, query=preprocessing_result['processed_query'])
-4. answer = generate_answer(documents=search_result, query=preprocessing_result['original_query'], evaluation_result=evaluation)
+3. evaluation = evaluate_documents(query="...", documents=search_result['retrieved_docs_data'])
+4. answer = generate_answer(documents=search_result['retrieved_docs_data'], query=preprocessing_result['original_query'], evaluation_result=evaluation)
 
 PENTING: 
 - Gunakan {history_summary} dan {previous_responses} yang tersedia dalam context
@@ -199,7 +202,7 @@ Jawab dalam Bahasa Indonesia dengan sitasi yang akurat."""
             handle_parsing_errors=True,
             return_intermediate_steps=True,
             max_execution_time=120,
-            max_iterations=6,
+            max_iterations=10,
         )
 
         print("✅ RAG agent initialized successfully")

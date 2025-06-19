@@ -8,6 +8,7 @@ from typing import Union, Dict, Any, List
 import json
 from ..utils.config_manager import MODELS
 
+
 def safe_parse(input_str: str):
     """
     Safely parse a JSON string, with fallback handling
@@ -16,6 +17,7 @@ def safe_parse(input_str: str):
         return json.loads(input_str)
     except (json.JSONDecodeError, TypeError):
         return input_str
+
 
 @tool
 def evaluate_documents(
@@ -49,12 +51,18 @@ def evaluate_documents(
                 if "retrieved_docs_data" in documents:
                     try:
                         parsed = safe_parse(documents)
-                        json_data = parsed if isinstance(parsed, dict) else {"retrieved_docs_data": []}
+                        json_data = (
+                            parsed
+                            if isinstance(parsed, dict)
+                            else {"retrieved_docs_data": []}
+                        )
                     except:
                         json_data = {"retrieved_docs_data": []}
                 else:
                     # It's a formatted docs string, skip evaluation for now
-                    print(f"[EVAL] ⚠️ Received formatted docs string instead of structured data")
+                    print(
+                        f"[EVAL] ⚠️ Received formatted docs string instead of structured data"
+                    )
                     return "MEMADAI: Dokumen telah tersedia untuk evaluasi."
             else:
                 json_data = {"retrieved_docs_data": []}
@@ -66,12 +74,12 @@ def evaluate_documents(
         # Debug: check what documents we received
         print(f"\n[DEBUG] 📋 Documents received for evaluation:")
         for i, doc in enumerate(retrieved_docs):
-            source = doc.get('source', 'Unknown')
-            metadata = doc.get('metadata', {})
-            status = metadata.get('status')
+            source = doc.get("source", "Unknown")
+            metadata = doc.get("metadata", {})
+            status = metadata.get("status")
             print(f"[DEBUG] Doc {i+1}: {source} (Status: {status})")
 
-        # Hitung jumlah dokumen dan status
+        # Hitung jumlah dokumen dan status (hanya untuk logging)
         doc_count = len(retrieved_docs)
         berlaku_count = sum(
             1
@@ -89,87 +97,38 @@ def evaluate_documents(
         print(f"Dokumen berlaku: {berlaku_count}")
         print(f"Dokumen dicabut: {dicabut_count}")
 
-        # Cek heuristik tambahan sebelum memanggil LLM
-        # Jika query jelas membutuhkan peraturan terkini dan hanya ada yang dicabut
-        need_current_info = any(
-            term in query.lower()
-            for term in [
-                "terbaru",
-                "saat ini",
-                "sekarang",
-                "terkini",
-                "berlaku",
-                "yang masih berlaku",
-                "yang masih digunakan",
-                "peraturan baru",
-            ]
-        )
-
-        if need_current_info:
-            print("\nQuery membutuhkan informasi peraturan terkini")
-            if berlaku_count == 0 and dicabut_count > 0:
-                print("⚠️ Peringatan: Hanya ditemukan peraturan yang sudah dicabut")
-                return "KURANG MEMADAI: Hanya ditemukan peraturan yang sudah dicabut, sementara query membutuhkan informasi peraturan yang masih berlaku."
-
-        # Format dokumen untuk evaluasi
+        # ------------ FORMAT DOKUMEN UNTUK PROMPT ------------
         formatted_docs = []
-        for doc in retrieved_docs:
+        for idx, doc in enumerate(retrieved_docs):
             metadata = doc.get("metadata", {})
             status = metadata.get("status", "status tidak diketahui")
             jenis = metadata.get("jenis_peraturan", "")
             nomor = metadata.get("nomor_peraturan", "")
             tahun = metadata.get("tahun_peraturan", "")
 
-            # Format referensi dokumen
             ref = (
-                f"[{jenis} No. {nomor} Tahun {tahun}] ({status})"
+                f"{jenis} No. {nomor} Tahun {tahun} ({status})"
                 if all([jenis, nomor, tahun])
-                else f"[Dokumen] ({status})"
+                else f"Dokumen ({status})"
             )
-
-            formatted_docs.append(f"{ref}\n{doc.get('content', '')}")
+            formatted_docs.append(
+                f"### DOC_{idx}\nSumber: {ref}\nIsi:\n{doc.get('content', '')}"
+            )
 
         formatted_docs_str = "\n\n".join(formatted_docs)
 
-        # Use LLM to evaluate document adequacy for the query
+        # ------------ LLM CALL ------------
         evaluator = ChatOpenAI(**MODELS["REF_EVAL"])
 
-        evaluation_prompt = f"""Evaluasi SECARA OBJEKTIF apakah kumpulan dokumen berikut memberikan informasi YANG MEMADAI untuk menjawab query:
-
-Query: {query}
-
-Dokumen:
-{formatted_docs_str}
-
-1. Apakah dokumen berisi informasi relevan dengan query tersebut?
-2. Apakah Anda dapat memberikan jawaban lengkap berdasarkan dokumen-dokumen ini?
-3. Apakah dokumen-dokumen ini mencakup topik utama dari query?
-4. Apakah ada peraturan yang masih "berlaku" (bukan dicabut) yang membahas query?
-
-Berikan jawaban MEMADAI atau KURANG MEMADAI diikuti oleh alasan singkat.
-Format: "MEMADAI: [alasan]" ATAU "KURANG MEMADAI: [alasan]"
-Jawaban harus singkat dan langsung ke poin utama!"""
+        evaluation_prompt = f"""Anda bertindak sebagai evaluator kualitas dokumen untuk menjawab pertanyaan hukum kesehatan.\n\nQuery: {query}\n\nBerikut daftar dokumen dengan metadata status (berlaku/dicabut).\nNilailah SETIAP dokumen dan keluarkan JSON dengan format persis: \n{{\n  \"per_doc_scores\": [{{\"index\": int, \"score\": float, \"reason\": str}}...],\n  \"overall_quality\": \"MEMADAI|KURANG MEMADAI\",\n  \"overall_reason\": str\n}}\n\nAturan penilaian skor dokumen:\n- 1   : relevan & memadai (mengandung jawaban lengkap)\n- 0.5 : relevan tapi kurang detail\n- 0   : tidak relevan\n\nKriteria overall_quality:\n- MEMADAI jika terdapat ≥1 dokumen dengan skor 1\n- Selain itu KURANG MEMADAI\n\nDokumen:\n{formatted_docs_str}\n"""
 
         result = evaluator.invoke(evaluation_prompt)
-        evaluation = result.content.strip()
+        evaluation_json = result.content.strip()
 
-        print(f"\nHasil evaluasi LLM: {evaluation}")
+        print(f"\nHasil evaluasi LLM (JSON): {evaluation_json}")
 
-        # Heuristik tambahan: jika evaluasi menyatakan MEMADAI tapi tidak ada dokumen yang berlaku
-        # dan query membutuhkan peraturan terkini, maka override menjadi KURANG MEMADAI
-        if (
-            "MEMADAI" in evaluation
-            and berlaku_count == 0
-            and dicabut_count > 0
-            and need_current_info
-        ):
-            evaluation = "KURANG MEMADAI: Hanya ditemukan peraturan yang sudah dicabut, sementara query membutuhkan informasi peraturan yang masih berlaku."
-            print(
-                f"\n⚠️ Override evaluasi: {evaluation}"
-            )
-
-        return evaluation
+        return evaluation_json
 
     except Exception as e:
         print(f"[ERROR] Error pada evaluasi dokumen: {str(e)}")
-        return "KURANG MEMADAI: Terjadi error dalam evaluasi dokumen." 
+        return "KURANG MEMADAI: Terjadi error dalam evaluasi dokumen."
