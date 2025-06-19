@@ -50,7 +50,7 @@ try:
 
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
     from observability.rag_tracker import rag_tracker, APIType, ExecutionMode
-    from cache.smart_cache import cache_system
+    from cache.smart_cache import cache_system, canonicalize_query
 
     LANGFUSE_ENABLED = rag_tracker.enabled
     print(
@@ -658,8 +658,9 @@ async def preprocess_query_for_cache(
             "needs_rewriting", False
         )
 
-        # Tentukan query mana yang akan digunakan untuk cache
-        cache_query = processed_query if needs_rewriting else original_query
+        # Gunakan bentuk kanonik agar variasi minor tetap hit
+        query_for_cache = processed_query if needs_rewriting else original_query
+        cache_query = canonicalize_query(query_for_cache)
 
         result = {
             "original_query": original_query,

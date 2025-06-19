@@ -120,7 +120,7 @@ class SmartRAGCache:
             self.redis_client = None
 
         # Cache settings
-        self.similarity_threshold = 0.85
+        self.similarity_threshold = 0.80  # lebih longgar
         self.exact_ttl = 21600  # 6 hours
         self.semantic_ttl = 21600  # 6 hours
         self.document_ttl = 7200  # 2 hours
@@ -253,8 +253,9 @@ class SmartRAGCache:
             print(f"[CACHE] ⚠️ Cache storage error: {e}")
 
     def _get_query_hash(self, query: str, model: str) -> str:
-        """Generate hash untuk exact query matching"""
-        return hashlib.md5(f"{query.lower().strip()}_{model}".encode()).hexdigest()
+        """Generate stable hash for exact cache"""
+        canonical = canonicalize_query(query)
+        return hashlib.sha256(f"{canonical}:{model}".encode()).hexdigest()
 
     async def _get_query_embedding(
         self, query: str, model: str
@@ -471,3 +472,36 @@ def clear_cache(api_type: str = "multi"):
 
     cache_system.clear_cache()
     print(f"🧹 Multi-Step RAG cache cleared")
+
+
+# ====================== CANONICAL QUERY UTILS ======================
+# Stop-words sederhana Bahasa Indonesia
+STOPWORDS = {
+    "apa",
+    "bagaimana",
+    "apakah",
+    "tentang",
+    "yang",
+    "adalah",
+    "dengan",
+    "untuk",
+    "dan",
+    "atau",
+    "di",
+    "ke",
+    "dari",
+    "pada",
+    "ini",
+    "itu",
+    "kah",
+    "kalau",
+    "jadi",
+}
+
+
+def canonicalize_query(query: str) -> str:
+    """Ubah query menjadi bentuk kanonik agar cache exact lebih general."""
+    tokens = re.findall(r"[a-z0-9]+", query.lower())
+    tokens = [t for t in tokens if t not in STOPWORDS]
+    # Hilangkan duplikat sambil menjaga stabilitas dengan sort
+    return " ".join(sorted(set(tokens)))
