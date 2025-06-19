@@ -693,8 +693,5 @@ async def preprocess_query_for_cache(
 if __name__ == "__main__":
     import os
 
-    port = int(os.getenv("PORT", 8080))
-    print(f"Starting development server (Modular) on port {port}")
-    uvicorn.run(
-        "src.api.multi_api:app", host="0.0.0.0", port=port, reload=False
-    )
+    print(f"API Key: {API_KEY}")
+    uvicorn.run("multi_api:app", host="0.0.0.0", port=8000, reload=True)

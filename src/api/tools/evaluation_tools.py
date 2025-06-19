@@ -75,8 +75,8 @@ def evaluate_documents(
         print(f"\n[DEBUG] 📋 Documents received for evaluation:")
         for i, doc in enumerate(retrieved_docs):
             source = doc.get("source", "Unknown")
-            metadata = doc.get("metadata", {})
-            status = metadata.get("status")
+            metadata = doc.get("metadata", {}) or {}
+            status = metadata.get("status", "tidak diketahui")
             print(f"[DEBUG] Doc {i+1}: {source} (Status: {status})")
 
         # Hitung jumlah dokumen dan status (hanya untuk logging)
@@ -100,8 +100,8 @@ def evaluate_documents(
         # ------------ FORMAT DOKUMEN UNTUK PROMPT ------------
         formatted_docs = []
         for idx, doc in enumerate(retrieved_docs):
-            metadata = doc.get("metadata", {})
-            status = metadata.get("status", "status tidak diketahui")
+            metadata = doc.get("metadata", {}) or {}
+            status = metadata.get("status", "tidak diketahui")
             jenis = metadata.get("jenis_peraturan", "")
             nomor = metadata.get("nomor_peraturan", "")
             tahun = metadata.get("tahun_peraturan", "")

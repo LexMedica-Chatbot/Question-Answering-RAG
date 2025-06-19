@@ -7,6 +7,10 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import SupabaseVectorStore
 from supabase.client import Client, create_client
 from .config_manager import EMBEDDING_CONFIG
+from dotenv import load_dotenv
+
+# Muat variabel ENV sedini mungkin
+load_dotenv()
 
 # Initialize Supabase client globally untuk sharing
 supabase_url = os.environ.get("SUPABASE_URL")
@@ -39,4 +43,4 @@ def get_vector_store(embedding_model="large"):
         client=supabase,
         table_name=table_name,
         query_name=query_name,
-    ) 
+    )

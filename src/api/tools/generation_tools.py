@@ -89,7 +89,7 @@ def calculate_document_relevance(doc: Dict[str, Any], query: str) -> float:
     definition_score = 0.3 if any(term in content for term in definition_terms) else 0
 
     # Boost for current law (status berlaku)
-    status = doc.get("metadata", {}).get("status", "")
+    status = doc.get("metadata", {}).get("status", "tidak diketahui")
     status_score = 0.2 if status == "berlaku" else 0
 
     # Content length consideration
@@ -248,6 +248,13 @@ def generate_answer(
                 "content": doc.get("content", ""),
                 "metadata": doc.get("metadata", {}),
             }
+
+            # Pastikan metadata berisi status; default ke "tidak diketahui" jika hilang
+            meta = standardized_doc.get("metadata", {}) or {}
+            if not meta.get("status"):
+                meta["status"] = "tidak diketahui"
+            standardized_doc["metadata"] = meta
+
             standardized_docs.append(standardized_doc)
         else:
             print(f"[WARNING] Document {i+1} is not a dict: {type(doc)}")
@@ -408,12 +415,13 @@ INSTRUKSI KHUSUS:
 5. Gunakan SEMUA dokumen yang relevan dalam jawaban Anda
 6. Urutkan informasi dari yang paling penting/relevan ke yang kurang penting
 
-INSTRUKSI FORMATTING (WAJIB):
+INSTRUKSI FORMATTING (WAJIB – OUTPUT ANDA AKAN DINILAI):
 - Gunakan **bold** untuk kata-kata PENTING seperti: **nama peraturan**, **pasal**, **definisi kunci**, **status hukum**, **sanksi**, **kewajiban**, dll
 - Bold untuk **angka/nominal** penting, **tanggal**, **persyaratan**, **prosedur**
 - Bold untuk **istilah teknis** dan **konsep hukum** yang penting
 - Pastikan **sitasi [DOC_X]** juga di-bold
 - Contoh: "Berdasarkan **PP No. 28 Tahun 2024** **[DOC_1]**, **definisi kesehatan** adalah..."
+- Jika setelah menulis jawaban Anda melihat ada kata penting yang belum ditebalkan, **perbaiki jawaban Anda sebelum mengirim**.
 
 PERTANYAAN: {query}
 
