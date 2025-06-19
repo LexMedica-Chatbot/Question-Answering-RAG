@@ -88,7 +88,6 @@ docker-compose up -d
 
 ```bash
 docker-compose -f docker-compose-simple.yml up -d
-# Wait for health check: http://localhost:8081/health
 ```
 
 #### Step 3: Run Benchmark
