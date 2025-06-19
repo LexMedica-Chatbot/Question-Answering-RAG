@@ -155,15 +155,22 @@ async def process_csv_to_db(
 
 
 def main():
-    # Path to CSV files
-    csv_folder = "output"  # Path folder output ada di dalam folder Final
+    # Path to CSV files - updated to use data/processed folder
+    csv_folder = "data/processed"
+
+    # Check if folder exists
+    if not os.path.exists(csv_folder):
+        print(f"Error: Folder '{csv_folder}' tidak ditemukan")
+        return
+
     csv_files = [f for f in os.listdir(csv_folder) if f.endswith(".csv")]
 
     if not csv_files:
-        print("No CSV files found in the output folder")
+        print(f"No CSV files found in the {csv_folder} folder")
         return
 
-    print(f"Found {len(csv_files)} CSV files to process")
+    print(f"Found {len(csv_files)} CSV files to process from {csv_folder}")
+
     # Load all CSV files
     for csv_file in csv_files:
         file_path = os.path.join(csv_folder, csv_file)
@@ -173,7 +180,7 @@ def main():
         except Exception as e:
             print(f"Error processing {csv_file}: {str(e)}")
 
-    print("CSV documents successfully loaded into database")
+    print("All CSV documents from data/processed successfully loaded into database")
 
 
 if __name__ == "__main__":
