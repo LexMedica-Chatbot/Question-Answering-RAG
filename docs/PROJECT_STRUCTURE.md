@@ -24,6 +24,9 @@ Question-Answering-RAG/
 ├── 📁 data/                         # Data files
 │   ├── 📁 processed/                # Processed CSV files
 │   └── 📁 raw/                      # Raw PDF documents
+├── 📁 analysis/                     # Analysis & evaluation scripts
+├── 📁 visualizations/               # Charts & visualization files (PNG)
+├── 📁 datasets/                     # CSV datasets for evaluation
 ├── 📁 benchmarks/                   # Benchmark scripts
 ├── 📁 benchmark_results/            # Benchmark output
 ├── 📁 docs/                         # Documentation
@@ -146,11 +149,13 @@ make setup-env
 ## 🎯 Benefits of Cleanup
 
 1. **Simplified Dependencies**: Hanya dependencies yang benar-benar diperlukan
-2. **Cleaner Structure**: Struktur folder yang lebih fokus
+2. **Cleaner Structure**: Struktur folder yang lebih fokus dan terorganisir
 3. **Faster Installation**: Instalasi dependencies lebih cepat
 4. **Reduced Complexity**: Mengurangi kompleksitas configuration
 5. **Focus on Core**: Fokus pada fitur utama RAG system
 6. **Better Maintenance**: Lebih mudah untuk maintenance
+7. **Organized Development Files**: File analysis, visualization, dan dataset terpisah
+8. **Docker Friendly**: File non-essential tidak masuk ke Docker container
 
 ## 🔧 Available Make Commands
 
