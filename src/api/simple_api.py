@@ -350,7 +350,12 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     model_info: Dict[str, Any] = {}  # Ubah dari str ke Any untuk bisa menyimpan angka
-    referenced_documents: List[Dict[str, Any]] = []
+    referenced_documents: List[Dict[str, Any]] = (
+        []
+    )  # Dokumen aktif yang digunakan dalam jawaban
+    all_retrieved_documents: List[Dict[str, Any]] = (
+        []
+    )  # Semua dokumen (termasuk dicabut) untuk deteksi disharmony
     processing_time_ms: Optional[int] = None
 
 
@@ -554,13 +559,38 @@ async def chat(request: ChatRequest):
                 status_code=500, detail=f"Error saat membuat RAG chain: {str(e)}"
             )
 
-        # PURE RAG: Langsung gunakan query tanpa history processing
-        # Tidak ada kombinasi dengan history atau previous responses
-
         # Get relevant documents using direct query
         try:
             docs = retriever.invoke(request.query)
             print(f"[DEBUG] Retrieved {len(docs)} relevant documents")
+
+            # Store all retrieved documents before filtering (for disharmony detection)
+            all_retrieved_documents = extract_document_info(docs)
+            print(
+                f"[DEBUG] Stored {len(all_retrieved_documents)} total documents (including revoked)"
+            )
+
+            # Hard filtering: eliminate revoked documents for answer generation
+            active_docs = []
+            eliminated_count = 0
+
+            for doc in docs:
+                metadata = doc.metadata if isinstance(doc.metadata, dict) else {}
+                status = metadata.get("status", "berlaku").lower()
+
+                if status == "dicabut":
+                    eliminated_count += 1
+                else:
+                    active_docs.append(doc)
+
+            # Log filtering results only if documents were eliminated
+            if eliminated_count > 0:
+                print(
+                    f"[SIMPLE RAG] 🚫 Eliminated {eliminated_count} revoked documents, {len(active_docs)} remaining"
+                )
+
+            # Use filtered docs for generation
+            docs = active_docs
 
             # Track document retrieval
             if LANGFUSE_ENABLED and trace:
@@ -597,19 +627,27 @@ async def chat(request: ChatRequest):
                 detail=f"Error saat mengambil dokumen relevan: {str(e)}",
             )
 
-        # Extract document information
+        # Extract document information from active documents only
         try:
             referenced_documents = extract_document_info(docs)
-            print(f"[DEBUG] Extracted info from {len(referenced_documents)} documents")
+            print(
+                f"[DEBUG] Extracted info from {len(referenced_documents)} active documents"
+            )
         except Exception as e:
             print(f"[ERROR] Document info extraction failed: {str(e)}")
             referenced_documents = []  # Fallback to empty list
 
-        # Generate answer using pure RAG (tanpa history)
+        # Generate answer using pure RAG with filtered documents
         try:
-            # PURE RAG: Langsung invoke dengan query saja
-            answer = rag_chain.invoke(request.query)
-            print("[DEBUG] Successfully generated answer using pure RAG")
+            # Use filtered docs directly instead of retriever in chain
+            formatted_context = format_docs(docs)
+
+            # Create direct prompt input with filtered context
+            prompt_input = {"context": formatted_context, "question": request.query}
+
+            # Generate answer using the prompt, LLM, and parser directly
+            answer = (custom_prompt | llm | StrOutputParser()).invoke(prompt_input)
+            print("[DEBUG] Successfully generated answer using filtered documents")
 
             # Track LLM call (approximate token usage)
             estimated_input_tokens = (
@@ -688,6 +726,7 @@ async def chat(request: ChatRequest):
             answer=answer,
             model_info=model_info,
             referenced_documents=referenced_documents,
+            all_retrieved_documents=all_retrieved_documents,
             processing_time_ms=processing_time_ms,
         )
 

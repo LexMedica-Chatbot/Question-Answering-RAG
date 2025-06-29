@@ -111,71 +111,53 @@ def filter_documents_by_evaluation(
     """
     Filter documents based on evaluation result and sort by relevance
     Only keep documents that are considered adequate ("MEMADAI")
+    Hard filtering untuk mengeliminasi dokumen dicabut
     """
-    print("\n=== DOKUMEN SEBELUM FILTERING ===")
-    for i, doc in enumerate(documents, 1):
-        source = doc.get("source", "Unknown")
-        status = doc.get("metadata", {}).get("status", "tidak diketahui")
-        print(f"\nDokumen {i}:")
-        print(f"Source: {source}")
-        print(f"Status: {status}")
-        print(f"Preview: {doc.get('content', '')[:100]}...")
+    # Hard filtering: eliminate revoked documents
+    active_docs = []
+    eliminated_count = 0
 
-    print("\n=== PERHITUNGAN SKOR RELEVANSI ===")
+    for doc in documents:
+        status = doc.get("metadata", {}).get("status", "tidak diketahui").lower()
+
+        if status == "dicabut":
+            eliminated_count += 1
+        else:
+            active_docs.append(doc)
+
+    # Log filtering results only if documents were eliminated
+    if eliminated_count > 0:
+        print(
+            f"[FILTER] 🚫 Eliminated {eliminated_count} revoked documents, {len(active_docs)} remaining"
+        )
+
+    # Fallback to all documents if no active documents (prevent no-answer)
+    if not active_docs:
+        print("[FILTER] ⚠️ No active documents found, using all documents as fallback")
+        active_docs = documents
+
+    documents = active_docs
+
     # Calculate relevance scores for all documents
     scored_docs = []
     for doc in documents:
         score = calculate_document_relevance(doc, query)
         scored_docs.append((score, doc))
-        source = doc.get("source", "Unknown")
-        status = doc.get("metadata", {}).get("status", "tidak diketahui")
-        print(f"\nDokumen: {source}")
-        print(f"Status: {status}")
-        print(f"Skor Relevansi: {score:.3f}")
 
-    # Sort by relevance score (descending) - highest relevance first
+    # Sort by relevance score (descending)
     scored_docs.sort(key=lambda x: x[0], reverse=True)
 
-    print("\n=== HASIL FILTERING ===")
-    # Check evaluation result to determine filtering logic
+    # Filter based on evaluation result
     if "KURANG MEMADAI" in evaluation_result.upper():
-        # If evaluation says inadequate, we might need refinement
-        # But still return some docs for potential refinement
-        print(
-            "[FILTER] Evaluation indicates documents are inadequate - keeping top documents for refinement"
-        )
-        filtered_docs = [
-            doc for score, doc in scored_docs[:3]
-        ]  # Keep top 3 for refinement
+        # Keep top documents for refinement
+        filtered_docs = [doc for score, doc in scored_docs[:3]]
     else:
-        # Evaluation says adequate - filter based on relevance
-        print(
-            "[FILTER] Evaluation indicates documents are adequate - filtering by relevance"
-        )
-        min_score = 0.2  # Lower threshold since evaluation approved
+        # Filter by relevance threshold
+        min_score = 0.2
         filtered_docs = []
         for score, doc in scored_docs:
-            source = doc.get("source", "Unknown")
-            status = doc.get("metadata", {}).get("status", "tidak diketahui")
-            if score >= min_score and len(filtered_docs) < 5:  # Max 5 docs
+            if score >= min_score and len(filtered_docs) < 5:
                 filtered_docs.append(doc)
-                print(f"\n✅ Lolos Filtering:")
-                print(f"Source: {source}")
-                print(f"Status: {status}")
-                print(f"Skor: {score:.3f}")
-            else:
-                print(f"\n❌ Tidak Lolos Filtering:")
-                print(f"Source: {source}")
-                print(f"Status: {status}")
-                print(f"Skor: {score:.3f}")
-                print(
-                    f"Alasan: {'Skor terlalu rendah' if score < min_score else 'Melebihi batas maksimum dokumen'}"
-                )
-
-    print(f"\n=== RINGKASAN ===")
-    print(f"Total dokumen awal: {len(documents)}")
-    print(f"Dokumen yang lolos filtering: {len(filtered_docs)}")
-    print(f"Hasil evaluasi: {evaluation_result}")
 
     return filtered_docs
 
@@ -204,7 +186,6 @@ def generate_answer(
         }
     """
     print(f"[TOOL] Generating answer for query: {query}")
-    print(f"[DEBUG] Input type: {type(documents)}")
 
     # Parse documents input
     if isinstance(documents, str):
@@ -262,13 +243,36 @@ def generate_answer(
     doc_list = standardized_docs
     original_docs = list(doc_list)  # Simpan salinan sebelum filtering lanjutan
 
-    # Debug: log received documents
-    print(f"\n[DEBUG] 📋 Received {len(doc_list)} documents for filtering:")
-    for i, doc in enumerate(doc_list):
-        source = doc.get("source", "Unknown")
-        metadata = doc.get("metadata", {})
-        status = metadata.get("status", "tidak diketahui")
-        print(f"[DEBUG] Doc {i+1}: {source} (Status: {status})")
+    # Hard filtering: eliminate revoked documents
+    active_docs = []
+    eliminated_count = 0
+
+    for doc in doc_list:
+        status = doc.get("metadata", {}).get("status", "tidak diketahui").lower()
+
+        if status == "dicabut":
+            eliminated_count += 1
+        else:
+            active_docs.append(doc)
+
+    # Log filtering results only if documents were eliminated
+    if eliminated_count > 0:
+        print(
+            f"[GENERATE] 🚫 Eliminated {eliminated_count} revoked documents, {len(active_docs)} remaining"
+        )
+
+    doc_list = active_docs
+
+    # Return early if no active documents found
+    if not doc_list:
+        return json.dumps(
+            {
+                "answer": "Maaf, semua dokumen yang relevan sudah tidak berlaku (dicabut). Silakan coba dengan pertanyaan yang lebih spesifik atau hubungi ahli hukum untuk informasi terkini.",
+                "filtered_documents": [],
+                "total_documents_processed": len(original_docs),
+                "documents_used": 0,
+            }
+        )
 
     if not doc_list:
         return json.dumps(
@@ -382,14 +386,6 @@ def generate_answer(
                 "metadata": metadata,
             }
         )
-
-        print(
-            f"[DEBUG] {ref_key} final metadata: status={status}, jenis={jenis}, nomor={nomor}, tahun={tahun}, tipe={tipe}"
-        )
-
-    print(f"[DEBUG] Enhanced reference mapping:")
-    for key, citation in reference_mapping.items():
-        print(f"[DEBUG]   {key} -> {citation}")
 
     # Prepare context for LLM with focused, relevant documents (sorted by relevance)
     context_parts = []

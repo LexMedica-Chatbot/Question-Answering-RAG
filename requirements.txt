@@ -32,4 +32,10 @@ python-dotenv==1.0.1
 pydantic==2.10.5
 
 # LLM Observability (Simple & Focused)
-langfuse==2.60.1 
+langfuse==2.60.1
+
+# === EVALUATION ===
+ragas==0.2.15
+pandas==2.2.3
+requests==2.32.3
+datasets==3.1.0 

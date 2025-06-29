@@ -215,11 +215,13 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
 
         if isinstance(cached_result, dict):
             answer = cached_result.get("answer", "")
-            referenced_docs = cached_result.get("referenced_documents", [])
+            referenced_documents = cached_result.get("referenced_documents", [])
+            all_retrieved_documents = cached_result.get("all_retrieved_documents", [])
             model_info = cached_result.get("model_info", {})
         else:
             answer = str(cached_result)
-            referenced_docs = []
+            referenced_documents = []
+            all_retrieved_documents = []
             model_info = {}
 
         print(f"🎯 Cache HIT - returning cached response ({processing_time_ms}ms)")
@@ -227,7 +229,8 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
 
         return MultiStepRAGResponse(
             answer=answer,
-            referenced_documents=referenced_docs,
+            referenced_documents=referenced_documents,
+            all_retrieved_documents=all_retrieved_documents,
             processing_steps=[
                 StepInfo(
                     tool="query_preprocessing",
@@ -288,6 +291,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             return MultiStepRAGResponse(
                 answer="Maaf, sistem sedang dalam proses inisialisasi. Silakan coba lagi dalam beberapa saat.",
                 referenced_documents=[],
+                all_retrieved_documents=[],
                 processing_steps=[],
                 processing_time_ms=int((time.time() - start_time) * 1000),
                 model_info={
@@ -318,6 +322,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         # Extract answer and processing info
         answer = result.get("output", "")
         referenced_documents = []
+        all_retrieved_documents = []  # Store all documents including revoked ones
         processing_steps = []
 
         intermediate_steps = result.get("intermediate_steps", [])
@@ -360,14 +365,25 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             )
             processing_steps.append(step_info)
 
-            # Extract referenced documents from search_documents tool
+            # Extract documents from search_documents tool
             if tool_name == "search_documents" and isinstance(observation, dict):
+                # Extract active documents (for answer generation)
                 docs_data = observation.get("retrieved_docs_data", [])
                 if docs_data:
                     referenced_documents.extend(docs_data)
-                    print(f"[API] 📄 Found {len(docs_data)} documents from search")
+                    print(
+                        f"[API] 📄 Found {len(docs_data)} active documents from search"
+                    )
 
-        # Remove duplicate documents
+                # Extract ALL documents (including revoked ones for disharmony detection)
+                all_docs_data = observation.get("all_retrieved_docs_data", [])
+                if all_docs_data:
+                    all_retrieved_documents.extend(all_docs_data)
+                    print(
+                        f"[API] 📋 Found {len(all_docs_data)} total documents (including revoked) from search"
+                    )
+
+        # Remove duplicate documents for referenced_documents (active docs)
         unique_docs = []
         seen_hashes = set()
         for doc in referenced_documents:
@@ -377,6 +393,20 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 seen_hashes.add(content_hash)
 
         referenced_documents = unique_docs
+
+        # Remove duplicate documents for all_retrieved_documents (including revoked)
+        unique_all_docs = []
+        seen_all_hashes = set()
+        for doc in all_retrieved_documents:
+            content_hash = hash(str(doc.get("content", "")))
+            if content_hash not in seen_all_hashes:
+                unique_all_docs.append(doc)
+                seen_all_hashes.add(content_hash)
+
+        all_retrieved_documents = unique_all_docs
+        print(
+            f"[API] 📊 Document summary: {len(referenced_documents)} active, {len(all_retrieved_documents)} total (including revoked)"
+        )
 
         # Add preprocessing step to processing_steps if query was rewritten
         if needs_rewriting:
@@ -393,6 +423,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         response_data = {
             "answer": answer,
             "referenced_documents": referenced_documents,
+            "all_retrieved_documents": all_retrieved_documents,
             "processing_steps": processing_steps,
             "processing_time_ms": processing_time_ms,
             "model_info": {
@@ -415,6 +446,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             cache_data = {
                 "answer": answer,
                 "referenced_documents": referenced_documents,
+                "all_retrieved_documents": all_retrieved_documents,
                 "model_info": {
                     "parallel_execution": False,
                     "embedding_model": request.embedding_model,
@@ -447,6 +479,7 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         return MultiStepRAGResponse(
             answer=f"Maaf, terjadi kesalahan: {str(e)}",
             referenced_documents=[],
+            all_retrieved_documents=[],
             processing_steps=[],
             processing_time_ms=processing_time_ms,
             model_info={
