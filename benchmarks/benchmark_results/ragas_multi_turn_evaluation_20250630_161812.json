@@ -1,0 +1,113 @@
+[
+  {
+    "scenario_name": "Skenario Aborsi Legal - Multi Turn",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Dalam situasi apa saja tenaga kesehatan atau tenaga medis dapat melakukan tindakan aborsi yang dibenarkan oleh hukum di Indonesia, dan apa saja syarat yang harus dipenuhi?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Bisakah Anda jelaskan lebih detail tentang prosedur persetujuan untuk kasus kedaruratan medis?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Apakah ada perbedaan aturan untuk tenaga medis yang bekerja di rumah sakit swasta vs pemerintah?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": NaN,
+      "Legal Accuracy Metric": NaN,
+      "Completeness Metric": NaN,
+      "Helpfulness Metric": NaN
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-06-30T16:10:56.818043"
+  },
+  {
+    "scenario_name": "Skenario Izin Praktik - Multi Turn",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Bagaimana cara mendapatkan izin praktik dokter di Indonesia?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Apa sanksi yang bisa diterima jika praktik tanpa izin?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Berapa lama masa berlaku izin praktik dan bagaimana cara memperpanjangnya?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": NaN,
+      "Legal Accuracy Metric": NaN,
+      "Completeness Metric": NaN,
+      "Helpfulness Metric": NaN
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-06-30T16:14:18.966676"
+  },
+  {
+    "scenario_name": "Skenario Malpraktik - Multi Turn",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Apa definisi malpraktik medis menurut hukum Indonesia?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Bagaimana proses hukum jika ada dugaan malpraktik?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        },
+        {
+          "content": "Apakah ada asuransi atau perlindungan hukum untuk tenaga medis?",
+          "type": "human"
+        },
+        {
+          "content": "No response received",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": NaN,
+      "Legal Accuracy Metric": NaN,
+      "Completeness Metric": NaN,
+      "Helpfulness Metric": NaN
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-06-30T16:18:12.947951"
+  }
+]
