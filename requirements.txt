@@ -24,6 +24,9 @@ html2text==2024.2.26
 rapidfuzz==3.12.1
 scikit-learn==1.5.2
 
+# === INDONESIAN NLP ===
+Sastrawi==1.0.1
+
 # === CACHING ===
 redis==5.2.1
 

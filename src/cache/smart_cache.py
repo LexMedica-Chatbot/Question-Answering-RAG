@@ -474,34 +474,107 @@ def clear_cache(api_type: str = "multi"):
     print(f"🧹 Multi-Step RAG cache cleared")
 
 
-# ====================== CANONICAL QUERY UTILS ======================
-# Stop-words sederhana Bahasa Indonesia
-STOPWORDS = {
-    "apa",
-    "bagaimana",
-    "apakah",
-    "tentang",
-    "yang",
-    "adalah",
-    "dengan",
-    "untuk",
-    "dan",
-    "atau",
-    "di",
-    "ke",
-    "dari",
-    "pada",
-    "ini",
-    "itu",
-    "kah",
-    "kalau",
-    "jadi",
-}
+# ====================== CANONICAL QUERY UTILS WITH SASTRAWI ======================
+try:
+    from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
+    from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
+
+    # Initialize Sastrawi components
+    stemmer_factory = StemmerFactory()
+    stemmer = stemmer_factory.create_stemmer()
+
+    stopword_factory = StopWordRemoverFactory()
+    stopword_remover = stopword_factory.create_stop_word_remover()
+
+    SASTRAWI_AVAILABLE = True
+    print("[CACHE] ✅ Sastrawi library loaded successfully")
+
+except ImportError:
+    print("[CACHE] ⚠️ Sastrawi not available, falling back to manual stopwords")
+    SASTRAWI_AVAILABLE = False
+
+    # Fallback manual stopwords (minimal set)
+    MANUAL_STOPWORDS = {
+        "apa",
+        "bagaimana",
+        "apakah",
+        "tentang",
+        "yang",
+        "adalah",
+        "dengan",
+        "untuk",
+        "dan",
+        "atau",
+        "di",
+        "ke",
+        "dari",
+        "pada",
+        "ini",
+        "itu",
+        "kah",
+        "kalau",
+        "jadi",
+        "gimana",
+        "seperti",
+        "pemerintah",
+        "indonesia",
+        "nasional",
+        "bagi",
+        "dalam",
+        "oleh",
+        "serta",
+        "dapat",
+        "akan",
+        "sudah",
+    }
 
 
 def canonicalize_query(query: str) -> str:
-    """Ubah query menjadi bentuk kanonik agar cache exact lebih general."""
-    tokens = re.findall(r"[a-z0-9]+", query.lower())
-    tokens = [t for t in tokens if t not in STOPWORDS]
-    # Hilangkan duplikat sambil menjaga stabilitas dengan sort
-    return " ".join(sorted(set(tokens)))
+    """
+    Ubah query menjadi bentuk kanonik menggunakan Sastrawi untuk stemming dan stopword removal.
+
+    Process:
+    1. Lowercase dan clean text
+    2. Remove stopwords dengan Sastrawi StopWordRemover + custom stopwords
+    3. Stemming dengan Sastrawi Stemmer
+    4. Sort untuk konsistensi
+    """
+    if not query:
+        return ""
+
+    try:
+        if SASTRAWI_AVAILABLE:
+            # Sastrawi approach (more robust)
+            # Step 1: Clean dan lowercase
+            clean_query = re.sub(r"[^\w\s]", " ", query.lower())
+            clean_query = re.sub(r"\s+", " ", clean_query).strip()
+
+            # Step 2: Remove stopwords dengan Sastrawi
+            no_stopwords = stopword_remover.remove(clean_query)
+
+            # Step 3: Remove additional custom stopwords yang sering muncul
+            # (untuk konsistensi dengan cache lama)
+            CUSTOM_STOPWORDS = {"bagaimana", "gimana", "seperti", "apa", "apakah"}
+            tokens = no_stopwords.split()
+            tokens = [t for t in tokens if t not in CUSTOM_STOPWORDS]
+            no_stopwords = " ".join(tokens)
+
+            # Step 4: Stemming dengan Sastrawi
+            stemmed = stemmer.stem(no_stopwords)
+
+            # Step 5: Tokenize, deduplicate, dan sort
+            tokens = [token for token in stemmed.split() if len(token) > 1]
+
+            return " ".join(sorted(set(tokens)))
+
+        else:
+            # Fallback manual approach
+            tokens = re.findall(r"[a-z0-9]+", query.lower())
+            tokens = [t for t in tokens if t not in MANUAL_STOPWORDS and len(t) > 1]
+            return " ".join(sorted(set(tokens)))
+
+    except Exception as e:
+        print(f"[CACHE] ⚠️ Error in canonicalization: {e}")
+        # Ultimate fallback - simple cleanup
+        tokens = re.findall(r"[a-z0-9]+", query.lower())
+        return " ".join(sorted(set(tokens)))

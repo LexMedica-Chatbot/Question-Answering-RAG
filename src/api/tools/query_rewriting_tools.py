@@ -297,18 +297,32 @@ def smart_query_preprocessing(
             except Exception:
                 pass
 
-        # ===== Selalu lakukan query rewriting (tidak lagi bergantung pada context analysis) =====
-        processed_query = rewrite_query_with_history.func(
-            current_query, chat_history, previous_responses
+        # STEP 1: Analisis context dependency dulu
+        context_analysis = analyze_query_context_dependency.func(
+            current_query, chat_history
         )
-        processing_method = "rewritten"
+
+        needs_rewriting = context_analysis.get("needs_rewriting", False)
+
+        # STEP 2: Conditional rewriting berdasarkan analysis
+        if needs_rewriting:
+            processed_query = rewrite_query_with_history.func(
+                current_query, chat_history, previous_responses
+            )
+            processing_method = "rewritten"
+            print(f"[SMART PREPROCESSING] ✅ Query rewritten due to context dependency")
+        else:
+            processed_query = current_query
+            processing_method = "original"
+            print(
+                f"[SMART PREPROCESSING] ✅ Query kept original - no context dependency detected"
+            )
 
         result = {
             "original_query": current_query,
             "processed_query": processed_query,
             "processing_method": processing_method,
-            # Tetap kembalikan context_analysis kosong agar kompatibel dengan caller lama
-            "context_analysis": {},
+            "context_analysis": context_analysis,
             "improvement_ratio": (
                 len(processed_query) / len(current_query) if current_query else 1.0
             ),
@@ -316,8 +330,10 @@ def smart_query_preprocessing(
 
         print(f"[SMART PREPROCESSING] ✅ Processing complete:")
         print(f"  - Method: {processing_method}")
-        print(f"  - Original: {current_query}")
-        print(f"  - Processed: {processed_query}")
+        print(f"  - Needs rewriting: {needs_rewriting}")
+        print(
+            f"  - Dependency score: {context_analysis.get('dependency_score', 0):.2f}"
+        )
         return result
 
     except Exception as e:
@@ -356,17 +372,34 @@ def smart_query_preprocessing_with_history(
             f"[SMART PREPROCESSING WITH HISTORY] 📚 History summary: {history_summary[:100] if history_summary else 'None'}..."
         )
 
-        # ===== Langsung lakukan query rewriting =====
-        processed_query = rewrite_query_with_history.func(
-            current_query, history_summary, previous_responses
+        # STEP 1: Analisis context dependency dulu
+        context_analysis = analyze_query_context_dependency.func(
+            current_query, history_summary
         )
-        processing_method = "rewritten"
+
+        needs_rewriting = context_analysis.get("needs_rewriting", False)
+
+        # STEP 2: Conditional rewriting berdasarkan analysis
+        if needs_rewriting:
+            processed_query = rewrite_query_with_history.func(
+                current_query, history_summary, previous_responses
+            )
+            processing_method = "rewritten"
+            print(
+                f"[SMART PREPROCESSING WITH HISTORY] ✅ Query rewritten due to context dependency"
+            )
+        else:
+            processed_query = current_query
+            processing_method = "original"
+            print(
+                f"[SMART PREPROCESSING WITH HISTORY] ✅ Query kept original - no context dependency detected"
+            )
 
         result = {
             "original_query": current_query,
             "processed_query": processed_query,
             "processing_method": processing_method,
-            "context_analysis": {},
+            "context_analysis": context_analysis,
             "improvement_ratio": (
                 len(processed_query) / len(current_query) if current_query else 1.0
             ),
@@ -374,8 +407,10 @@ def smart_query_preprocessing_with_history(
 
         print(f"[SMART PREPROCESSING WITH HISTORY] ✅ Processing complete:")
         print(f"  - Method: {processing_method}")
-        print(f"  - Original: {current_query}")
-        print(f"  - Processed: {processed_query}")
+        print(f"  - Needs rewriting: {needs_rewriting}")
+        print(
+            f"  - Dependency score: {context_analysis.get('dependency_score', 0):.2f}"
+        )
         return result
 
     except Exception as e:

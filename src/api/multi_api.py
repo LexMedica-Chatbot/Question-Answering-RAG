@@ -39,7 +39,10 @@ from .tools import (
 )
 from .executors import get_agent_executor, create_agent_tools
 from .utils.history_utils import summarize_pairs
-from .tools.query_rewriting_tools import smart_query_preprocessing_with_history
+from .tools.query_rewriting_tools import (
+    smart_query_preprocessing_with_history,
+    rewrite_query_with_history,
+)
 
 # Load environment variables
 load_dotenv()
@@ -192,18 +195,19 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         previous_responses=request.previous_responses,
     )
 
+    refined_query = preprocessing_result["refined_query"]
     cache_query = preprocessing_result["cache_query"]
-    needs_rewriting = preprocessing_result["needs_rewriting"]
+    processing_method = preprocessing_result["processing_method"]
 
-    print(f"[API] 🔄 Query preprocessing complete:")
+    print(f"[API] 🔄 Simple preprocessing complete:")
     print(f"  - Original: {request.query}")
-    print(f"  - Cache query: {cache_query}")
-    print(f"  - Needs rewriting: {needs_rewriting}")
+    print(f"  - Refined: {refined_query}")
+    print(f"  - Cache key: {cache_query}")
 
-    # STEP 2: Check cache dengan processed query
+    # STEP 2: Cache lookup dengan refined query
     try:
         cached_result = await cache_system.get_cached_response(
-            query=cache_query,  # ← Gunakan cache_query, bukan original query
+            query=refined_query,  # ✅ Pass refined query ke cache system
             embedding_model=request.embedding_model,
         )
     except Exception as cache_error:
@@ -225,7 +229,8 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
             model_info = {}
 
         print(f"🎯 Cache HIT - returning cached response ({processing_time_ms}ms)")
-        print(f"🎯 Cache hit for processed query: {cache_query}")
+        print(f"🎯 Cache hit for query: {refined_query}")
+        print(f"🎯 Cache canonical form: {cache_query}")
 
         return MultiStepRAGResponse(
             answer=answer,
@@ -242,7 +247,10 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 ),
                 StepInfo(
                     tool="cache_lookup",
-                    tool_input={"cache_query": cache_query},
+                    tool_input={
+                        "refined_query": refined_query,
+                        "cache_query": cache_query,
+                    },
                     tool_output=f"Cache hit - response retrieved from cache",
                 ),
             ],
@@ -254,9 +262,9 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 "modular_architecture": True,
                 "query_preprocessing": {
                     "original_query": request.query,
+                    "refined_query": refined_query,
                     "cache_query": cache_query,
-                    "needs_rewriting": needs_rewriting,
-                    "processing_method": preprocessing_result["processing_method"],
+                    "processing_method": processing_method,
                 },
             },
         )
@@ -306,10 +314,10 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         refinement_module = importlib.import_module("src.api.tools.refinement_tools")
         refinement_module.refinement_count = 0
 
-        # Execute multi-step RAG
+        # Execute multi-step RAG dengan refined query
         result = await agent_executor.ainvoke(
             {
-                "input": request.query,
+                "input": refined_query,  # ✅ Gunakan refined query untuk RAG
                 "history_summary": history_summary,
                 "chat_history": chat_history,
                 "previous_responses": request.previous_responses or [],
@@ -409,14 +417,14 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
         )
 
         # Add preprocessing step to processing_steps if query was rewritten
-        if needs_rewriting:
+        if processing_method == "rewritten":
             preprocessing_step = StepInfo(
                 tool="query_preprocessing",
                 tool_input={
                     "original_query": request.query,
                     "history_summary": history_summary,
                 },
-                tool_output=f"Query rewritten: {preprocessing_result['processing_method']} - {cache_query}",
+                tool_output=f"Query rewritten: {processing_method} - {cache_query}",
             )
             processing_steps.insert(0, preprocessing_step)  # Insert at beginning
 
@@ -434,14 +442,14 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                 "version": "2.0.0",
                 "query_preprocessing": {
                     "original_query": request.query,
+                    "refined_query": refined_query,
                     "cache_query": cache_query,
-                    "needs_rewriting": needs_rewriting,
-                    "processing_method": preprocessing_result["processing_method"],
+                    "processing_method": processing_method,
                 },
             },
         }
 
-        # Cache the response dengan cache_query
+        # Cache the response dengan query_for_cache (raw query)
         try:
             cache_data = {
                 "answer": answer,
@@ -453,20 +461,19 @@ async def multi_step_rag_chat(request: MultiStepRAGRequest):
                     "modular_architecture": True,
                     "query_preprocessing": {
                         "original_query": request.query,
+                        "refined_query": refined_query,
                         "cache_query": cache_query,
-                        "needs_rewriting": needs_rewriting,
-                        "processing_method": preprocessing_result["processing_method"],
+                        "processing_method": processing_method,
                     },
                 },
             }
             await cache_system.cache_response(
-                query=cache_query,  # ← Gunakan cache_query untuk storage
+                query=refined_query,  # ✅ Cache dengan refined query
                 model=request.embedding_model,
                 response=cache_data,
             )
-            print(
-                f"[API] ✅ Response cached successfully with cache_query: {cache_query}"
-            )
+            print(f"[API] ✅ Response cached successfully with query: {refined_query}")
+            print(f"[API] 🔍 Canonical form: {cache_query}")
         except Exception as cache_error:
             print(f"[API] ⚠️ Failed to cache response: {cache_error}")
 
@@ -656,70 +663,54 @@ async def preprocess_query_for_cache(
     previous_responses: List[str] = None,
 ) -> Dict[str, Any]:
     """
-    Preprocess query untuk cache lookup yang optimal.
-
-    Alur:
-    1. Analisis apakah query context-dependent
-    2. Jika ya, lakukan query rewriting
-    3. Return processed query untuk cache lookup
-
-    Args:
-        original_query: Query asli dari user
-        history_summary: Ringkasan chat history
-        embedding_model: Model embedding yang digunakan
-
-    Returns:
-        Dict dengan original_query, processed_query, dan metadata
+    SIMPLIFIED: Refine query (kalau ada history) → Clean → Cache lookup
     """
     try:
-        print(f"\n[CACHE PREPROCESSING] 🧠 Analyzing query for cache optimization...")
+        print(f"\n[CACHE PREPROCESSING] 🧠 Simple preprocessing...")
         print(f"[CACHE PREPROCESSING] 📝 Original query: {original_query}")
         print(f"[CACHE PREPROCESSING] 📚 Has history: {bool(history_summary)}")
 
-        # Gunakan smart preprocessing untuk analisis dan rewriting
-        preprocessing_result = smart_query_preprocessing_with_history.invoke(
-            {
-                "current_query": original_query,
-                "history_summary": history_summary,
-                "previous_responses": previous_responses or [],
-            }
-        )
+        # STEP 1: Refine query kalau ada history (conditional)
+        if history_summary.strip():
+            # Ada history, lakukan rewriting
+            refined_query = rewrite_query_with_history.func(
+                original_query, history_summary, previous_responses
+            )
+            processing_method = "rewritten"
+            print(f"[CACHE PREPROCESSING] ✅ Query refined (has history)")
+        else:
+            # Tidak ada history, pakai original
+            refined_query = original_query
+            processing_method = "original"
+            print(f"[CACHE PREPROCESSING] ✅ Query kept original (no history)")
 
-        processed_query = preprocessing_result.get("processed_query", original_query)
-        processing_method = preprocessing_result.get("processing_method", "original")
-        needs_rewriting = preprocessing_result.get("context_analysis", {}).get(
-            "needs_rewriting", False
-        )
+        # STEP 2: Cleaning untuk cache lookup
+        from cache.smart_cache import canonicalize_query
 
-        # Gunakan bentuk kanonik agar variasi minor tetap hit
-        query_for_cache = processed_query if needs_rewriting else original_query
-        cache_query = canonicalize_query(query_for_cache)
+        cache_query = canonicalize_query(refined_query)
 
         result = {
             "original_query": original_query,
-            "processed_query": processed_query,
+            "refined_query": refined_query,
             "cache_query": cache_query,
             "processing_method": processing_method,
-            "needs_rewriting": needs_rewriting,
-            "preprocessing_result": preprocessing_result,
         }
 
-        print(f"[CACHE PREPROCESSING] ✅ Analysis complete:")
-        print(f"  - Needs rewriting: {needs_rewriting}")
-        print(f"  - Cache query: {cache_query}")
-        print(f"  - Processing method: {processing_method}")
+        print(f"[CACHE PREPROCESSING] ✅ Simple preprocessing complete:")
+        print(f"  - Original: {original_query}")
+        print(f"  - Refined: {refined_query}")
+        print(f"  - Cache key: {cache_query}")
+        print(f"  - Method: {processing_method}")
 
         return result
 
     except Exception as e:
-        print(f"[CACHE PREPROCESSING] ❌ Error in preprocessing: {str(e)}")
+        print(f"[CACHE PREPROCESSING] ❌ Error: {str(e)}")
         return {
             "original_query": original_query,
-            "processed_query": original_query,
+            "refined_query": original_query,
             "cache_query": original_query,
             "processing_method": "error_fallback",
-            "needs_rewriting": False,
-            "preprocessing_result": {},
         }
 
 
