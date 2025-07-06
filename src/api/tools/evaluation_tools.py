@@ -63,13 +63,25 @@ def evaluate_documents(
                     print(
                         f"[EVAL] ⚠️ Received formatted docs string instead of structured data"
                     )
-                    return "MEMADAI: Dokumen telah tersedia untuk evaluasi."
+                    return json.dumps(
+                        {
+                            "per_doc_scores": [],
+                            "overall_quality": "MEMADAI",
+                            "overall_reason": "Dokumen telah tersedia untuk evaluasi.",
+                        }
+                    )
             else:
                 json_data = {"retrieved_docs_data": []}
 
         retrieved_docs = json_data.get("retrieved_docs_data", [])
         if not retrieved_docs:
-            return "KURANG MEMADAI: Tidak ditemukan dokumen yang relevan."
+            return json.dumps(
+                {
+                    "per_doc_scores": [],
+                    "overall_quality": "KURANG MEMADAI",
+                    "overall_reason": "Tidak ditemukan dokumen yang relevan.",
+                }
+            )
 
         # Debug: check what documents we received
         print(f"\n[DEBUG] 📋 Documents received for evaluation:")
@@ -131,4 +143,10 @@ def evaluate_documents(
 
     except Exception as e:
         print(f"[ERROR] Error pada evaluasi dokumen: {str(e)}")
-        return "KURANG MEMADAI: Terjadi error dalam evaluasi dokumen."
+        return json.dumps(
+            {
+                "per_doc_scores": [],
+                "overall_quality": "KURANG MEMADAI",
+                "overall_reason": "Terjadi error dalam evaluasi dokumen.",
+            }
+        )

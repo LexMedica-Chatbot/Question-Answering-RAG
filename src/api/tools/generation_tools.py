@@ -62,56 +62,15 @@ JSON:"""
         return {"status": "tidak diketahui", "jenis_peraturan": "tidak diketahui"}
 
 
-def calculate_document_relevance(doc: Dict[str, Any], query: str) -> float:
-    """
-    Calculate relevance score for a document based on query
-    Returns score between 0.0 and 1.0
-    """
-    content = doc.get("content", "").lower()
-    query_lower = query.lower()
-
-    # Basic keyword matching
-    query_words = set(query_lower.split())
-    content_words = set(content.split())
-
-    # Calculate word overlap
-    overlap = len(query_words.intersection(content_words))
-    word_score = overlap / len(query_words) if query_words else 0
-
-    # Boost for documents with key definition terms
-    definition_terms = [
-        "adalah",
-        "dimaksud dengan",
-        "yang disebut",
-        "pengertian",
-        "definisi",
-    ]
-    definition_score = 0.3 if any(term in content for term in definition_terms) else 0
-
-    # Boost for current law (status berlaku)
-    status = doc.get("metadata", {}).get("status", "tidak diketahui")
-    status_score = 0.2 if status == "berlaku" else 0
-
-    # Content length consideration
-    content_length = len(content)
-    if content_length < 50:
-        length_penalty = 0.2
-    elif content_length > 2000:
-        length_penalty = 0.1
-    else:
-        length_penalty = 0
-
-    total_score = word_score + definition_score + status_score - length_penalty
-    return min(1.0, max(0.0, total_score))
+# Soft filtering function removed - using only hard filtering + LLM evaluation
 
 
-def filter_documents_by_evaluation(
-    documents: List[Dict[str, Any]], evaluation_result: str, query: str
+def filter_documents_by_hard_filtering(
+    documents: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """
-    Filter documents based on evaluation result and sort by relevance
-    Only keep documents that are considered adequate ("MEMADAI")
-    Hard filtering untuk mengeliminasi dokumen dicabut
+    Apply only hard filtering to eliminate revoked documents
+    Let LLM evaluation handle relevance assessment
     """
     # Hard filtering: eliminate revoked documents
     active_docs = []
@@ -136,30 +95,7 @@ def filter_documents_by_evaluation(
         print("[FILTER] ⚠️ No active documents found, using all documents as fallback")
         active_docs = documents
 
-    documents = active_docs
-
-    # Calculate relevance scores for all documents
-    scored_docs = []
-    for doc in documents:
-        score = calculate_document_relevance(doc, query)
-        scored_docs.append((score, doc))
-
-    # Sort by relevance score (descending)
-    scored_docs.sort(key=lambda x: x[0], reverse=True)
-
-    # Filter based on evaluation result
-    if "KURANG MEMADAI" in evaluation_result.upper():
-        # Keep top documents for refinement
-        filtered_docs = [doc for score, doc in scored_docs[:3]]
-    else:
-        # Filter by relevance threshold
-        min_score = 0.2
-        filtered_docs = []
-        for score, doc in scored_docs:
-            if score >= min_score and len(filtered_docs) < 5:
-                filtered_docs.append(doc)
-
-    return filtered_docs
+    return active_docs
 
 
 @tool
@@ -286,54 +222,61 @@ def generate_answer(
 
     total_documents_processed = len(doc_list)
 
-    # SMART FILTERING: Filter based on evaluation result and sort by relevance
+    # SIMPLIFIED FILTERING: Use only LLM evaluation results
     if query and evaluation_result:
         try:
             parsed_eval = safe_parse(evaluation_result)
             if isinstance(parsed_eval, str):
-                raise ValueError("Evaluation result bukan JSON")
-            per_doc_scores = {
-                item["index"]: item for item in parsed_eval.get("per_doc_scores", [])
-            }
-            # Urutkan dokumen berdasarkan skor (1 > 0.5 > 0) lalu relevansi
-            scored_docs = []
-            for idx, doc in enumerate(doc_list):
-                eval_info = per_doc_scores.get(idx, {"score": 0})
-                eval_score = eval_info.get("score", 0)
-                relevance_score = calculate_document_relevance(doc, query)
-                # Tuple (-eval_score) agar 1 lebih dulu, lalu relevance
-                scored_docs.append(((-eval_score, -relevance_score), doc))
+                # Jika evaluation_result adalah string sederhana seperti "MEMADAI"
+                print(
+                    f"[GENERATE] 💡 evaluation_result is simple string: {evaluation_result}"
+                )
+                # Gunakan semua dokumen yang sudah di-hard filter
+                print(f"[GENERATE] 📄 Using all {len(doc_list)} active documents")
+            else:
+                # JSON evaluation result - gunakan dokumen dengan LLM score >= 0.5
+                per_doc_scores = {
+                    item["index"]: item
+                    for item in parsed_eval.get("per_doc_scores", [])
+                }
 
-            scored_docs.sort(key=lambda x: x[0])
-            doc_list = [
-                doc
-                for _, doc in scored_docs
-                if per_doc_scores.get(doc_list.index(doc), {"score": 0}).get("score", 0)
-                >= 0.5
-            ]
+                # Filter dokumen berdasarkan LLM evaluation score
+                filtered_docs = []
+                for idx, doc in enumerate(doc_list):
+                    eval_info = per_doc_scores.get(idx, {"score": 0})
+                    eval_score = eval_info.get("score", 0)
 
-            # Fallback jika setelah filter tidak ada dokumen memadai
-            if not doc_list:
-                # Gunakan relevansi tertinggi dari dokumen asli
-                scored_by_rel = [
-                    (calculate_document_relevance(doc, query), doc)
-                    for doc in original_docs
-                ]
-                scored_by_rel.sort(key=lambda x: x[0], reverse=True)
-                doc_list = [doc for score, doc in scored_by_rel[:3]]
+                    if eval_score >= 0.5:  # Gunakan dokumen dengan score >= 0.5
+                        filtered_docs.append(doc)
+
+                # Urutkan berdasarkan LLM score (1.0 > 0.5)
+                filtered_docs.sort(
+                    key=lambda doc: per_doc_scores.get(
+                        doc_list.index(doc), {"score": 0}
+                    ).get("score", 0),
+                    reverse=True,
+                )
+
+                if filtered_docs:
+                    doc_list = filtered_docs
+                    print(
+                        f"[GENERATE] ✅ Using {len(doc_list)} documents with LLM score >= 0.5"
+                    )
+                else:
+                    # Fallback: gunakan semua dokumen jika tidak ada yang score >= 0.5
+                    print(
+                        f"[GENERATE] ⚠️ No documents with score >= 0.5, using all {len(doc_list)} documents"
+                    )
+
         except Exception as parse_err:
-            print(f"[WARNING] Tidak dapat parse evaluation_result JSON: {parse_err}")
-            doc_list = filter_documents_by_evaluation(
-                doc_list, evaluation_result, query
-            )
+            print(f"[WARNING] Error processing evaluation_result: {parse_err}")
+            print(f"[GENERATE] 🔄 Using all documents as fallback")
+            # Fallback: gunakan semua dokumen yang sudah di-hard filter
     else:
-        # Fallback: sort by relevance if no evaluation result
-        if query:
-            scored_docs = [
-                (calculate_document_relevance(doc, query), doc) for doc in doc_list
-            ]
-            scored_docs.sort(key=lambda x: x[0], reverse=True)
-            doc_list = [doc for score, doc in scored_docs[:3]]
+        # Fallback: gunakan semua dokumen jika tidak ada evaluation result
+        print(
+            f"[GENERATE] 📄 No evaluation result, using all {len(doc_list)} documents"
+        )
 
     if not doc_list:
         return json.dumps(

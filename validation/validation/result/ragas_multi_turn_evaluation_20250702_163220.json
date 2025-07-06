@@ -1,0 +1,187 @@
+[
+  {
+    "scenario_name": "Skenario Context-Heavy: Aborsi Legal dengan Follow-up Kompleks",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Dalam situasi apa saja tenaga kesehatan atau tenaga medis dapat melakukan tindakan aborsi yang dibenarkan oleh hukum di Indonesia, dan apa saja syarat yang harus dipenuhi?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan UU No. 17 Tahun 2023 Pasal 60 tentang Kesehatan, tenaga kesehatan atau tenaga medis hanya dapat melakukan tindakan aborsi dalam situasi yang diperbolehkan oleh hukum, yaitu sesuai dengan kriteria yang diatur dalam Kitab Undang-Undang Hukum Pidana. Pelaksanaan aborsi yang dibenarkan tersebut harus memenuhi syarat sebagai berikut:\n\n1. Dilakukan oleh tenaga medis yang memiliki kompetensi dan kewenangan, serta dibantu oleh tenaga kesehatan yang juga kompeten dan berwenang.\n2. Dilaksanakan di Fasilitas Pelayanan Kesehatan yang memenuhi syarat yang ditetapkan oleh Menteri Kesehatan.\n3. Diperoleh dengan persetujuan perempuan hamil yang bersangkutan dan persetujuan suami, kecuali dalam kasus korban perkosaan yang tidak memerlukan persetujuan suami.\n\nSelanjutnya, berdasarkan PP No. 28 Tahun 2024 Pasal 119 tentang Peraturan Pelaksanaan UU No. 17 Tahun 2023, pelayanan aborsi yang diperbolehkan harus:\n\n1. Dilakukan hanya pada Fasilitas Pelayanan Kesehatan tingkat lanjut yang memenuhi standar sumber daya kesehatan sesuai ketentuan Menteri.\n2. Dilaksanakan oleh tenaga medis dan dibantu tenaga kesehatan sesuai dengan kompetensi dan kewenangannya.\n\nDengan demikian, tindakan aborsi yang dibenarkan oleh hukum di Indonesia hanya dapat dilakukan dalam kondisi yang memenuhi kriteria pidana, oleh tenaga medis yang berkompeten, di fasilitas kesehatan yang memenuhi standar, dan dengan persetujuan yang sah sesuai ketentuan, kecuali untuk korban perkosaan yang tidak memerlukan persetujuan suami.\n\nKesimpulan:\n- Tindakan aborsi hanya diperbolehkan sesuai kriteria hukum pidana.\n- Dilakukan oleh tenaga medis berkompeten dan dibantu tenaga kesehatan.\n- Dilaksanakan di fasilitas pelayanan kesehatan yang memenuhi standar Menteri.\n- Memerlukan persetujuan perempuan hamil dan suami (kecuali korban perkosaan).\n\nSemua ketentuan ini mengacu pada UU No. 17 Tahun 2023 Pasal 60 dan PP No. 28 Tahun 2024 Pasal 119.",
+          "type": "ai"
+        },
+        {
+          "content": "Jadi gimana berdasarkan yang tadi, kalau kasusnya perempuan hamil dalam keadaan tidak sadar dan butuh tindakan darurat?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan PP No. 28 Tahun 2024 Pasal 116 yang merupakan peraturan pelaksanaan dari UU No. 17 Tahun 2023 tentang Kesehatan, tindakan aborsi darurat pada perempuan hamil yang dalam keadaan tidak sadar dan membutuhkan tindakan segera diatur dengan ketentuan sebagai berikut:\n\n1. Aborsi hanya diperbolehkan dalam kondisi kedaruratan medis atau pada kasus korban tindak pidana perkosaan atau kekerasan seksual yang menyebabkan kehamilan, sesuai dengan ketentuan dalam Kitab Undang-Undang Hukum Pidana (KUHP).\n\n2. Pelaksanaan aborsi dalam kondisi tersebut hanya dapat dilakukan oleh Tenaga Medis yang memiliki kompetensi dan kewenangan, dibantu oleh Tenaga Kesehatan yang memenuhi syarat, serta dilakukan di Fasilitas Pelayanan Kesehatan yang telah memenuhi persyaratan yang ditetapkan oleh Menteri Kesehatan.\n\n3. Untuk kasus aborsi darurat pada perempuan yang tidak sadar, persetujuan perempuan hamil tidak dapat diperoleh secara langsung. Namun, berdasarkan ketentuan umum, aborsi tetap harus dilakukan dengan memperhatikan persetujuan suami, kecuali dalam kasus korban perkosaan atau keadaan darurat medis yang mengancam jiwa ibu, di mana tindakan medis segera dapat dilakukan demi menyelamatkan nyawa tanpa persetujuan langsung tersebut.\n\nDengan demikian, hukum kesehatan Indonesia mengatur bahwa aborsi darurat pada perempuan hamil yang dalam keadaan tidak sadar dan memerlukan tindakan segera dapat dilakukan oleh tenaga medis berkompeten di fasilitas kesehatan yang memenuhi syarat, berdasarkan indikasi kedaruratan medis, tanpa harus menunggu persetujuan langsung dari perempuan tersebut, sesuai dengan ketentuan dalam PP No. 28 Tahun 2024 Pasal 116 dan UU No. 17 Tahun 2023 Pasal 60 serta ketentuan KUHP terkait aborsi yang diperbolehkan.",
+          "type": "ai"
+        },
+        {
+          "content": "Terus untuk syarat yang disebutkan barusan, apa bedanya kalau di RS swasta vs pemerintah?",
+          "type": "human"
+        },
+        {
+          "content": "Agent stopped due to max iterations.",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": 1,
+      "Legal Accuracy Metric": 1,
+      "Completeness Metric": 0,
+      "Helpfulness Metric": 0
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-07-02T16:16:01.504765"
+  },
+  {
+    "scenario_name": "Skenario Referensi Implisit: Hak Pasien Complex Chain",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Apa saja hak fundamental yang dimiliki setiap orang dalam memperoleh pelayanan kesehatan menurut peraturan perundang-undangan yang berlaku?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan UU No. 17 Tahun 2023 Pasal 4 tentang Kesehatan, setiap orang memiliki hak fundamental dalam memperoleh pelayanan kesehatan sebagai berikut:\n\n1. Hak untuk hidup sehat secara fisik, jiwa, dan sosial.\n2. Hak mendapatkan informasi dan edukasi tentang kesehatan yang seimbang dan bertanggung jawab.\n3. Hak memperoleh pelayanan kesehatan yang aman, bermutu, dan terjangkau guna mewujudkan derajat kesehatan yang setinggi-tingginya.\n4. Hak mendapatkan perawatan kesehatan sesuai dengan standar pelayanan kesehatan.\n5. Hak memperoleh akses atas sumber daya kesehatan.\n6. Hak menentukan sendiri pelayanan kesehatan yang diperlukan secara mandiri dan bertanggung jawab.\n7. Hak mendapatkan lingkungan yang sehat untuk pencapaian derajat kesehatan.\n8. Hak menerima atau menolak sebagian atau seluruh tindakan pertolongan setelah menerima dan memahami informasi lengkap mengenai tindakan tersebut.\n9. Hak memperoleh kerahasiaan data dan informasi kesehatan pribadi.\n10. Hak memperoleh informasi tentang data kesehatan diri, termasuk tindakan dan pengobatan yang telah atau akan dilakukan.\n\nHak-hak tersebut diatur untuk menjamin pelayanan kesehatan yang berkualitas dan menghormati martabat serta otonomi setiap individu dalam konteks kesehatan.\n\n(Sumber: UU No. 17 Tahun 2023 Pasal 4 tentang Kesehatan)",
+          "type": "ai"
+        },
+        {
+          "content": "Dari hak-hak yang disebutkan tadi, mana yang bisa dikecualikan dalam keadaan darurat?",
+          "type": "human"
+        },
+        {
+          "content": "Dalam hukum kesehatan Indonesia, hak-hak pelayanan kesehatan yang dapat dikecualikan atau dibatasi dalam keadaan darurat terutama berkaitan dengan pelayanan yang diberikan di luar kewenangan normal tenaga medis dan tenaga kesehatan, serta pembatasan prosedur administratif demi percepatan penanganan pasien.\n\n1. Berdasarkan UU No. 17 Tahun 2023 Pasal 286, dalam keadaan tertentu seperti penanganan kegawatdaruratan medis, KLB, wabah, dan darurat bencana, Tenaga Medis dan Tenaga Kesehatan dapat memberikan pelayanan di luar kewenangannya. Ini berarti ada pembatasan atau pengecualian terhadap hak pasien untuk mendapatkan pelayanan hanya dari tenaga yang secara formal berwenang, demi memenuhi kebutuhan darurat.\n\n2. Selanjutnya, menurut Pasal 111, dalam keadaan darurat, setiap Fasilitas Pelayanan Kesehatan wajib memberikan pelayanan kesehatan tanpa menolak pasien dan tanpa meminta uang muka terlebih dahulu. Ini menunjukkan bahwa hak pasien untuk mendapatkan pelayanan tidak boleh ditolak, namun kewajiban administratif seperti pembayaran dapat dikesampingkan sementara demi penyelamatan nyawa dan pencegahan kedisabilitasan.\n\n3. Selain itu, Pasal 174 menegaskan bahwa dalam kondisi gawat darurat, fasilitas kesehatan dilarang menolak pasien, meminta uang muka, dan mendahulukan urusan administratif yang dapat menunda pelayanan kesehatan. Dengan demikian, hak pasien atas pelayanan cepat dan prioritas disesuaikan dengan kebutuhan keadaan darurat, membatasi hak administratif yang biasanya melekat.\n\nSecara ringkas, hak pasien atas pelayanan kesehatan penuh dapat dibatasi dalam hal tenaga medis memberikan pelayanan di luar kewenangannya dan pembatasan prosedur administratif seperti penolakan pasien dan permintaan uang muka ditiadakan demi percepatan penanganan dalam keadaan darurat. Namun, hak untuk mendapatkan pelayanan kesehatan tetap dijamin tanpa penolakan selama keadaan darurat tersebut berlangsung.\n\nKesimpulan:\n- Pelayanan di luar kewenangan tenaga medis diperbolehkan dalam keadaan darurat (Pasal 286).\n- Fasilitas kesehatan wajib melayani pasien tanpa penolakan dan tanpa uang muka dalam keadaan darurat (Pasal 111).\n- Prosedur administratif yang menghambat pelayanan harus dikesampingkan dalam kondisi gawat darurat (Pasal 174).\n\nDengan demikian, pembatasan hak-hak pelayanan kesehatan dalam keadaan darurat terutama menyangkut kewenangan tenaga medis dan prosedur administratif, bukan pembatasan hak pasien untuk mendapatkan pelayanan itu sendiri.\n\n(Sumber: UU No. 17 Tahun 2023 Pasal 286, Pasal 111, dan Pasal 174 tentang Kesehatan)",
+          "type": "ai"
+        },
+        {
+          "content": "Nah untuk pengecualian itu, prosedurnya seperti apa?",
+          "type": "human"
+        },
+        {
+          "content": "Agent stopped due to max iterations.",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": 1,
+      "Legal Accuracy Metric": 1,
+      "Completeness Metric": 0,
+      "Helpfulness Metric": 0
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-07-02T16:19:47.938612"
+  },
+  {
+    "scenario_name": "Skenario Query Enhancement: BPJS Funding Deep Dive",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Dari mana saja sumber pendanaan Aset BPJS, dan secara spesifik, untuk apa saja Dana Jaminan Sosial yang dikelola oleh BPJS dapat dimanfaatkan sesuai ketentuan?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan ketentuan dalam UU No. 24 Tahun 2011 Pasal 41 dan PP No. 87 Tahun 2013 Pasal 12, sumber pendanaan aset BPJS berasal dari beberapa sumber utama, yaitu:\n\n1. Modal awal dari Pemerintah, yang merupakan kekayaan negara yang dipisahkan dan tidak terbagi atas saham;\n2. Hasil pengalihan aset Badan Usaha Milik Negara (BUMN) yang sebelumnya menyelenggarakan program jaminan sosial (contohnya aset dari PT Askes Persero untuk BPJS Kesehatan);\n3. Hasil pengembangan aset BPJS itu sendiri;\n4. Dana operasional yang diambil dari Dana Jaminan Sosial; dan/atau\n5. Sumber lain yang sah sesuai dengan peraturan perundang-undangan.\n\nSecara spesifik, Dana Jaminan Sosial yang dikelola oleh BPJS dapat dimanfaatkan untuk:\n\n- Biaya operasional penyelenggaraan program Jaminan Sosial;\n- Biaya pengadaan barang dan jasa yang digunakan untuk mendukung operasional penyelenggaraan Jaminan Sosial;\n- Biaya untuk peningkatan kapasitas pelayanan; dan\n- Investasi dalam instrumen investasi sesuai dengan peraturan perundang-undangan.\n\nDengan demikian, dana tersebut tidak hanya digunakan untuk kebutuhan rutin operasional, tetapi juga untuk pengembangan dan investasi guna memastikan keberlanjutan program jaminan sosial yang dikelola oleh BPJS.\n\nReferensi hukum utama yang mengatur hal ini adalah Pasal 41 UU No. 24 Tahun 2011 dan Pasal 12 PP No. 87 Tahun 2013 yang mengatur secara rinci sumber dan penggunaan aset BPJS.",
+          "type": "ai"
+        },
+        {
+          "content": "Yang tadi disebutkan ada hasil pengembangan aset, itu maksudnya investasi ya? Gimana aturannya?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan dokumen yang tersedia, hasil pengembangan aset yang disebutkan memang merujuk pada bentuk investasi yang dilakukan oleh BPJS Kesehatan dalam mengelola asetnya. Aturan terkait pengembangan aset ini diatur dalam beberapa pasal dalam PP No. 87 Tahun 2013 tentang Pengelolaan Aset Jaminan Sosial Kesehatan.\n\n1. Definisi dan Bentuk Investasi  \n   Pengembangan aset BPJS Kesehatan dilakukan dalam bentuk investasi yang ditempatkan pada instrumen investasi dalam negeri. Instrumen investasi ini meliputi berbagai jenis, antara lain:  \n   - Deposito berjangka pada Bank, termasuk deposit on call dan deposito dengan jangka waktu tertentu (misalnya kurang dari atau sama dengan 1 atau 3 bulan)  \n   - Surat berharga yang diterbitkan oleh Negara Republik Indonesia  \n   - Surat berharga yang diterbitkan oleh Bank Indonesia  \n   - Surat utang korporasi yang tercatat dan diperjualbelikan di Bursa Efek Indonesia  \n   - Saham yang tercatat di Bursa Efek Indonesia  \n   - Reksadana  \n   - Efek beragun aset  \n   - Dana investasi real estate  \n   - Penyertaan langsung dan tanah (untuk pengembangan aset tertentu)  \n   Hal ini dijelaskan secara rinci dalam Pasal 23 ayat (2) dan Pasal 22 PP No. 87 Tahun 2013.\n\n2. Pembatasan dan Ketentuan Khusus  \n   - Untuk investasi berupa deposito berjangka pada Bank dengan jangka waktu kurang dari atau sama dengan 3 bulan, terdapat batasan maksimal 15% dari jumlah investasi untuk setiap Bank (Pasal 30 ayat (3)).  \n   - Investasi berupa surat utang korporasi harus memiliki peringkat minimal A- atau setara dari perusahaan pemeringkat efek yang berizin (Pasal 24 ayat (1)).  \n   - Produk reksadana yang digunakan harus sudah terdaftar di lembaga pengawas pasar modal (Pasal 24 ayat (2)).  \n   - Investasi berupa efek beragun aset dan dana investasi real estate harus memenuhi ketentuan pernyataan efektif dari lembaga pengawas (Pasal 24 ayat (3)).\n\n3. Kesimpulan  \n   Jadi, hasil pengembangan aset yang dimaksud memang adalah investasi yang dilakukan oleh BPJS Kesehatan dalam berbagai instrumen investasi yang telah diatur secara ketat oleh peraturan pemerintah. Aturan ini bertujuan untuk menjaga keamanan, likuiditas, dan keuntungan investasi demi keberlanjutan dana jaminan sosial kesehatan.\n\nDengan demikian, pengembangan aset BPJS Kesehatan adalah investasi yang dilakukan pada instrumen investasi dalam negeri dengan ketentuan dan batasan tertentu sebagaimana diatur dalam PP No. 87 Tahun 2013, khususnya dalam Pasal 22, Pasal 23, dan Pasal 24.\n\nReferensi:\n- PP No. 87 Tahun 2013 Pasal 22, 23, 24, dan 30 tentang Pengelolaan Aset Jaminan Sosial Kesehatan.",
+          "type": "ai"
+        },
+        {
+          "content": "Untuk investasi yang barusan dibahas, ada batasan atau larangan tertentu nggak?",
+          "type": "human"
+        },
+        {
+          "content": "Agent stopped due to max iterations.",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": 1,
+      "Legal Accuracy Metric": 1,
+      "Completeness Metric": 0,
+      "Helpfulness Metric": 0
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-07-02T16:24:21.346977"
+  },
+  {
+    "scenario_name": "Skenario Advanced Context: Wabah Multi-Layer Questions",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Bagaimana definisi dan kriteria Wabah Penyakit Menular serta langkah-langkah penanggulangannya?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan Undang-Undang No. 17 Tahun 2023 tentang Kesehatan, definisi dan kriteria wabah penyakit menular adalah sebagai berikut:\n\n1. Definisi Wabah Penyakit Menular:\n   Wabah penyakit menular adalah kejadian penyakit menular yang terjadi secara cepat dan meluas, yang dapat menimbulkan dampak serius terhadap kesehatan masyarakat.\n\n2. Kriteria Penyakit yang Berpotensi Menimbulkan Wabah:\n   Penyakit yang berpotensi menimbulkan wabah harus memenuhi kriteria:\n   a. Disebabkan oleh agen biologi;\n   b. Dapat menular dari manusia ke manusia dan/atau dari hewan ke manusia;\n   c. Berpotensi menimbulkan sakit parah, kedisabilitasan, dan/atau kematian;\n   d. Berpotensi meningkat dan menyebar secara cepat.\n\n   Penyakit tersebut dapat berupa:\n   - Penyakit menular endemis tertentu;\n   - Penyakit menular baru;\n   - Penyakit menular lama yang muncul kembali.\n\n   Penetapan jenis penyakit ini dilakukan oleh Menteri Kesehatan dan dapat diubah sesuai perkembangan epidemiologis, sosial budaya, keamanan, ekonomi, serta ilmu pengetahuan dan teknologi.\n\n3. Langkah-langkah Penanggulangan Wabah Penyakit Menular:\n   Meskipun dokumen yang tersedia tidak secara rinci merinci langkah-langkah penanggulangan, secara umum penanggulangan wabah meliputi:\n   - Deteksi dini dan pelaporan kasus penyakit menular;\n   - Penetapan status kewaspadaan wabah oleh pemerintah;\n   - Pengendalian penyebaran melalui tindakan isolasi, karantina, dan pengobatan;\n   - Pemberian informasi dan edukasi kepada masyarakat;\n   - Koordinasi lintas sektor dalam penanggulangan wabah;\n   - Penetapan kebijakan dan regulasi oleh Menteri Kesehatan terkait pengendalian wabah.\n\nLangkah-langkah ini merupakan bagian dari kewenangan dan tanggung jawab pemerintah pusat dan daerah dalam menjaga kesehatan masyarakat dari ancaman wabah.\n\nSumber: UU No. 17 Tahun 2023 Pasal 357 tentang Kesehatan.",
+          "type": "ai"
+        },
+        {
+          "content": "Dari kriteria yang dijelaskan tadi, siapa yang berwenang menetapkan suatu daerah sebagai terjangkit wabah?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan ketentuan hukum kesehatan Indonesia, Menteri adalah pihak yang berwenang menetapkan suatu daerah sebagai Daerah Terjangkit Wabah. Hal ini diatur dalam Undang-Undang No. 17 Tahun 2023 Pasal 368 yang menyatakan bahwa Menteri menetapkan atau mencabut penetapan daerah tertentu sebagai Daerah Terjangkit Wabah dengan mempertimbangkan aspek seperti etiologi penyakit, situasi kasus dan kematian, kapasitas pelayanan kesehatan, dan kondisi masyarakat.\n\nPenetapan Daerah Terjangkit Wabah dapat dilakukan pada berbagai wilayah, termasuk wilayah administratif, wilayah pintu masuk seperti bandar udara atau pelabuhan, wilayah kepulauan, dan wilayah tertentu lainnya. Penetapan ini dilakukan berdasarkan analisis epidemiologi dan/atau usulan dari Pemerintah Daerah untuk wilayah administratif serta rekomendasi kementerian/lembaga terkait untuk wilayah selain administratif, sebagaimana diatur dalam Peraturan Pemerintah No. 28 Tahun 2024 Pasal 1085.\n\nSelain itu, dalam pelaksanaan penanggulangan wabah, Pemerintah Daerah dan pejabat yang berwenang di pintu masuk memiliki peran operasional, namun kewenangan penetapan tetap berada pada Menteri.\n\nDengan demikian, Menteri adalah otoritas tertinggi yang menetapkan atau mencabut status Daerah Terjangkit Wabah dengan mempertimbangkan berbagai aspek epidemiologi, sosial, budaya, ekonomi, dan keamanan negara.\n\nReferensi:\n- UU No. 17 Tahun 2023 Pasal 368\n- PP No. 28 Tahun 2024 Pasal 1085, 1084, 1089, dan 1095 tentang Pelaksanaan UU No. 17 Tahun 2023 tentang Kesehatan.",
+          "type": "ai"
+        },
+        {
+          "content": "Setelah ditetapkan seperti itu, apa langkah konkret pertama yang harus diambil?",
+          "type": "human"
+        },
+        {
+          "content": "Agent stopped due to max iterations.",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": 1,
+      "Legal Accuracy Metric": 1,
+      "Completeness Metric": 0,
+      "Helpfulness Metric": 0
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-07-02T16:28:29.191598"
+  },
+  {
+    "scenario_name": "Skenario Pronoun Resolution: Tanggung Jawab Pemerintah",
+    "evaluation": {
+      "user_input": [
+        {
+          "content": "Apa saja tanggung jawab pemerintah dalam menyelenggarakan upaya kesehatan bagi masyarakat?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan UU No. 17 Tahun 2023 Pasal 19, Pemerintah Pusat dan Pemerintah Daerah memiliki tanggung jawab utama dalam penyelenggaraan Upaya Kesehatan perseorangan dan Upaya Kesehatan masyarakat. Secara rinci, tanggung jawab Pemerintah Pusat meliputi:\n\n1. Perencanaan strategis nasional  \n2. Penetapan kebijakan nasional  \n3. Koordinasi program nasional  \n4. Pengelolaan sistem rujukan Pelayanan Kesehatan  \n5. Penetapan standar Pelayanan Kesehatan  \n6. Penyelenggaraan registrasi dan akreditasi Fasilitas Pelayanan Kesehatan  \n7. Penelitian dan pengembangan Kesehatan  \n8. Pengelolaan dan pendistribusian Sumber Daya Kesehatan  \n9. Penerbitan perizinan berusaha Fasilitas Pelayanan Kesehatan sesuai dengan ketentuan peraturan perundang-undangan  \n\nSementara itu, Pemerintah Daerah bertanggung jawab untuk:\n\n1. Penetapan kebijakan daerah dengan berpedoman pada kebijakan nasional  \n2. Perencanaan, pengelolaan, pemantauan, supervisi, dan evaluasi penyelenggaraan Upaya Kesehatan di wilayahnya  \n3. Pengelolaan sistem rujukan Pelayanan Kesehatan tingkat daerah  \n4. Penelitian dan pengembangan Kesehatan  \n5. Pengelolaan dan pendistribusian Sumber Daya Kesehatan  \n6. Penerbitan perizinan berusaha Fasilitas Pelayanan Kesehatan sesuai dengan ketentuan peraturan perundang-undangan  \n\nSelain itu, berdasarkan UU No. 17 Tahun 2023 Pasal 6, Pemerintah Pusat dan Daerah juga wajib merencanakan, mengatur, menyelenggarakan, membina, dan mengawasi penyelenggaraan Upaya Kesehatan yang bermutu, aman, efisien, merata, dan terjangkau oleh masyarakat, serta melaksanakan tanggung jawab tersebut sesuai dengan ketentuan peraturan perundang-undangan yang berlaku.\n\nDengan demikian, tanggung jawab pemerintah dalam penyelenggaraan upaya kesehatan bagi masyarakat mencakup aspek perencanaan, kebijakan, pengelolaan, pengawasan, serta pengembangan sistem kesehatan secara menyeluruh dan terintegrasi antara Pemerintah Pusat dan Daerah untuk menjamin pelayanan kesehatan yang berkualitas dan merata bagi seluruh masyarakat Indonesia.\n\nReferensi:  \n- UU No. 17 Tahun 2023 Pasal 19  \n- UU No. 17 Tahun 2023 Pasal 6",
+          "type": "ai"
+        },
+        {
+          "content": "Yang bagian penelitian dan pengembangan itu, implementasinya gimana di tingkat daerah?",
+          "type": "human"
+        },
+        {
+          "content": "Berdasarkan hasil pencarian dan evaluasi dokumen peraturan perundang-undangan kesehatan Indonesia yang berlaku, implementasi penelitian dan pengembangan kesehatan di tingkat daerah menurut hukum kesehatan Indonesia secara spesifik belum diuraikan secara rinci dalam dokumen yang tersedia. \n\nNamun, beberapa ketentuan umum yang relevan adalah sebagai berikut:\n\n1. UU No. 17 Tahun 2023 Pasal 7 menyatakan bahwa Pemerintah Pusat dan Pemerintah Daerah bertanggung jawab meningkatkan dan mengembangkan Upaya Kesehatan, termasuk melalui penelitian dan pengkajian yang dilaksanakan sesuai ketentuan peraturan perundang-undangan.\n\n2. UU No. 17 Tahun 2023 Pasal 292 menyebutkan bahwa tenaga medis dan tenaga kesehatan dapat melakukan penelitian dan pengembangan yang mendukung pembangunan kesehatan, yang pelaksanaannya harus sesuai dengan ketentuan peraturan perundang-undangan.\n\n3. PP No. 28 Tahun 2024 Pasal 1036 mengatur bahwa Pemerintah Pusat dan Daerah memberikan kemudahan perizinan, dukungan sumber daya, dan hilirisasi terhadap penelitian, pengembangan, dan pengkajian teknologi kesehatan sesuai ketentuan peraturan perundang-undangan.\n\n4. UU No. 36 Tahun 2009 Pasal 31 mengatur bahwa fasilitas pelayanan kesehatan wajib memberikan akses bagi kebutuhan penelitian dan pengembangan di bidang kesehatan serta mengirimkan laporan hasil penelitian kepada pemerintah daerah atau Menteri.\n\nSecara umum, implementasi penelitian dan pengembangan di tingkat daerah dilakukan oleh Pemerintah Daerah dengan tanggung jawab meningkatkan dan mengembangkan upaya kesehatan melalui penelitian dan pengkajian yang sesuai dengan peraturan perundang-undangan. Pemerintah Daerah juga memberikan dukungan berupa kemudahan perizinan dan sumber daya untuk mendukung kegiatan tersebut.\n\nNamun, detail mekanisme pelaksanaan di tingkat daerah, seperti prosedur, lembaga pelaksana, dan pengawasan spesifik, tidak dijelaskan secara rinci dalam dokumen yang tersedia.\n\nReferensi:\n- UU No. 17 Tahun 2023 Pasal 7, Pasal 292, Pasal 323\n- PP No. 28 Tahun 2024 Pasal 1036\n- UU No. 36 Tahun 2009 Pasal 31\n\nJika Anda membutuhkan informasi lebih spesifik terkait pelaksanaan di tingkat daerah, mungkin perlu merujuk pada peraturan daerah atau kebijakan teknis yang dikeluarkan oleh Pemerintah Daerah masing-masing.",
+          "type": "ai"
+        },
+        {
+          "content": "Kalau daerahnya tidak mampu melaksanakan hal tersebut, pusat bisa intervensi nggak?",
+          "type": "human"
+        },
+        {
+          "content": "Agent stopped due to max iterations.",
+          "type": "ai"
+        }
+      ],
+      "Consistency Metric": 1,
+      "Legal Accuracy Metric": 1,
+      "Completeness Metric": 0,
+      "Helpfulness Metric": 0
+    },
+    "conversation_turns": 3,
+    "timestamp": "2025-07-02T16:32:20.497919"
+  }
+]

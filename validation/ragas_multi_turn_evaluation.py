@@ -1,10 +1,16 @@
 """
 Ragas Multi-Turn Conversation Evaluation untuk Multi Agent System
-Script lengkap untuk evaluasi multi-turn menggunakan AspectCritic
+Script lengkap untuk evaluasi multi-turn dengan fokus pada Query Enhancement Based on History
+
+Fitur Utama:
+  - Test referensi anaforik ("tadi", "itu", "yang barusan")
+  - Test incomplete queries yang memerlukan context
+  - Test pronoun resolution dan implicit references
+  - AspectCritic evaluation untuk conversation quality
 
 Usage:
-  python ragas_multi_turn_evaluation.py --demo     # Quick demo
-  python ragas_multi_turn_evaluation.py --full     # Full evaluation
+  python ragas_multi_turn_evaluation.py --demo     # Quick demo (3 turns)
+  python ragas_multi_turn_evaluation.py            # Full evaluation (15 turns)
   python ragas_multi_turn_evaluation.py --help     # Show help
 
 Environment:
@@ -46,9 +52,9 @@ class MultiAgentRagasEvaluator:
             )
 
         # Setup evaluator LLM untuk Ragas
-        self.evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4.1"))
+        self.evaluator_llm = LangchainLLMWrapper(ChatOpenAI(model="gpt-4.1-nano"))
 
-        # API configuration untuk multi agent
+        # API configuration untuk multi agent (localhost)
         self.api_url = "http://localhost:8080/api/chat"
         self.api_key = "your_secure_api_key_here"
         self.headers = {"x-api-key": self.api_key, "Content-Type": "application/json"}
@@ -143,10 +149,22 @@ class MultiAgentRagasEvaluator:
 
         try:
             response = requests.post(
-                self.api_url, json=payload, headers=self.headers, timeout=180
+                self.api_url,
+                json=payload,
+                headers=self.headers,
+                timeout=300,  # Increased timeout
             )
             response.raise_for_status()
-            return response.json()
+            api_result = response.json()
+
+            # Check for incomplete responses
+            if (
+                "answer" in api_result
+                and "Agent stopped due to max iterations" in api_result["answer"]
+            ):
+                print(f"⚠️  Warning: Agent hit max iterations limit")
+
+            return api_result
         except requests.exceptions.RequestException as e:
             print(f"Error calling API: {e}")
             return {"error": str(e)}
@@ -188,8 +206,8 @@ class MultiAgentRagasEvaluator:
             print(f"AI Response: {ai_content[:200]}...")
             print("-" * 50)
 
-            # Small delay between calls
-            time.sleep(1)
+            # Longer delay between calls to prevent overload
+            time.sleep(3)
 
         return MultiTurnSample(user_input=messages)
 
@@ -222,11 +240,12 @@ class MultiAgentRagasEvaluator:
 
         print("[OK] API connection successful!")
 
-        # Quick conversation test
+        # Quick conversation test with context dependency
         print("\n[TEST] Running quick conversation test...")
         quick_conversation = [
             "Apa yang dimaksud dengan informed consent dalam praktik medis?",
-            "Bagaimana jika pasien dalam keadaan tidak sadar dan perlu tindakan darurat?",
+            "Jadi gimana kalau pasiennya tidak sadar tapi butuh tindakan darurat, aturan yang tadi masih berlaku?",
+            "Untuk kasus seperti itu, dokternya bisa kena masalah hukum nggak?",
         ]
 
         print(f"[INFO] Conversation scenario: {len(quick_conversation)} turns")
@@ -272,27 +291,43 @@ class MultiAgentRagasEvaluator:
 
         scenarios = [
             {
-                "name": "Skenario Aborsi Legal - Multi Turn",
+                "name": "Skenario Context-Heavy: Aborsi Legal dengan Follow-up Kompleks",
                 "conversation": [
                     "Dalam situasi apa saja tenaga kesehatan atau tenaga medis dapat melakukan tindakan aborsi yang dibenarkan oleh hukum di Indonesia, dan apa saja syarat yang harus dipenuhi?",
-                    "Bisakah Anda jelaskan lebih detail tentang prosedur persetujuan untuk kasus kedaruratan medis?",
-                    "Apakah ada perbedaan aturan untuk tenaga medis yang bekerja di rumah sakit swasta vs pemerintah?",
+                    "Jadi gimana berdasarkan yang tadi, kalau kasusnya perempuan hamil dalam keadaan tidak sadar dan butuh tindakan darurat?",
+                    "Terus untuk syarat yang disebutkan barusan, apa bedanya kalau di RS swasta vs pemerintah?",
                 ],
             },
             {
-                "name": "Skenario Izin Praktik - Multi Turn",
+                "name": "Skenario Referensi Implisit: Hak Pasien Complex Chain",
                 "conversation": [
-                    "Bagaimana cara mendapatkan izin praktik dokter di Indonesia?",
-                    "Apa sanksi yang bisa diterima jika praktik tanpa izin?",
-                    "Berapa lama masa berlaku izin praktik dan bagaimana cara memperpanjangnya?",
+                    "Apa saja hak fundamental yang dimiliki setiap orang dalam memperoleh pelayanan kesehatan menurut peraturan perundang-undangan yang berlaku?",
+                    "Dari hak-hak yang disebutkan tadi, mana yang bisa dikecualikan dalam keadaan darurat?",
+                    "Nah untuk pengecualian itu, prosedurnya seperti apa?",
                 ],
             },
             {
-                "name": "Skenario Malpraktik - Multi Turn",
+                "name": "Skenario Query Enhancement: BPJS Funding Deep Dive",
                 "conversation": [
-                    "Apa definisi malpraktik medis menurut hukum Indonesia?",
-                    "Bagaimana proses hukum jika ada dugaan malpraktik?",
-                    "Apakah ada asuransi atau perlindungan hukum untuk tenaga medis?",
+                    "Dari mana saja sumber pendanaan Aset BPJS, dan secara spesifik, untuk apa saja Dana Jaminan Sosial yang dikelola oleh BPJS dapat dimanfaatkan sesuai ketentuan?",
+                    "Yang tadi disebutkan ada hasil pengembangan aset, itu maksudnya investasi ya? Gimana aturannya?",
+                    "Untuk investasi yang barusan dibahas, ada batasan atau larangan tertentu nggak?",
+                ],
+            },
+            {
+                "name": "Skenario Advanced Context: Wabah Multi-Layer Questions",
+                "conversation": [
+                    "Bagaimana definisi dan kriteria Wabah Penyakit Menular serta langkah-langkah penanggulangannya?",
+                    "Dari kriteria yang dijelaskan tadi, siapa yang berwenang menetapkan suatu daerah sebagai terjangkit wabah?",
+                    "Setelah ditetapkan seperti itu, apa langkah konkret pertama yang harus diambil?",
+                ],
+            },
+            {
+                "name": "Skenario Pronoun Resolution: Tanggung Jawab Pemerintah",
+                "conversation": [
+                    "Apa saja tanggung jawab pemerintah dalam menyelenggarakan upaya kesehatan bagi masyarakat?",
+                    "Yang bagian penelitian dan pengembangan itu, implementasinya gimana di tingkat daerah?",
+                    "Kalau daerahnya tidak mampu melaksanakan hal tersebut, pusat bisa intervensi nggak?",
                 ],
             },
         ]
@@ -371,8 +406,8 @@ class MultiAgentRagasEvaluator:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"ragas_multi_turn_evaluation_{timestamp}.json"
 
-        filepath = os.path.join("benchmark_results", filename)
-        os.makedirs("benchmark_results", exist_ok=True)
+        filepath = os.path.join("validation/result", filename)
+        os.makedirs("validation/result", exist_ok=True)
 
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
@@ -392,8 +427,8 @@ Script untuk evaluasi multi-turn conversation menggunakan Ragas AspectCritic
 untuk sistem multi agent berbasis hukum kesehatan Indonesia.
 
 USAGE:
-  python ragas_multi_turn_evaluation.py --demo     # Quick demo (2 turns)
-  python ragas_multi_turn_evaluation.py --full     # Full evaluation (9 turns) 
+  python ragas_multi_turn_evaluation.py --demo     # Quick demo (3 turns with context)
+  python ragas_multi_turn_evaluation.py            # Full evaluation (15 turns) 
   python ragas_multi_turn_evaluation.py --help     # Show this help
 
 SETUP:
@@ -408,12 +443,14 @@ METRICS EVALUATED:
   [OK] Helpfulness    - Response helpful dan actionable
 
 SCENARIOS (Full Evaluation):
-  [*] Aborsi Legal (3 turns)   - Situasi legal, prosedur, perbedaan RS
-  [*] Izin Praktik (3 turns)   - Cara dapat izin, sanksi, perpanjangan
-  [*] Malpraktik (3 turns)     - Definisi, proses hukum, perlindungan
+  [*] Context-Heavy: Aborsi Legal (3 turns)     - "gimana berdasarkan tadi", referensi implisit
+  [*] Referensi Implisit: Hak Pasien (3 turns)  - "yang disebutkan tadi", "pengecualian itu"
+  [*] Query Enhancement: BPJS Funding (3 turns) - "yang barusan dibahas", context dependency
+  [*] Advanced Context: Wabah Handling (3 turns) - "setelah ditetapkan seperti itu"
+  [*] Pronoun Resolution: Tanggung Jawab (3 turns) - "hal tersebut", "mereka", "itu"
 
 OUTPUT:
-  [FILE] benchmark_results/ragas_multi_turn_evaluation_TIMESTAMP.json
+  [FILE] validation/result/ragas_multi_turn_evaluation_TIMESTAMP.json
 
 EXAMPLE:
   # Quick test
@@ -421,7 +458,7 @@ EXAMPLE:
   python ragas_multi_turn_evaluation.py --demo
 
   # Full evaluation
-  python ragas_multi_turn_evaluation.py --full
+  python ragas_multi_turn_evaluation.py
 """
     print(help_text)
 
@@ -432,9 +469,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Ragas Multi-Turn Evaluation for Multi Agent"
     )
-    parser.add_argument("--demo", action="store_true", help="Run quick demo (2 turns)")
     parser.add_argument(
-        "--full", action="store_true", help="Run full evaluation (9 turns)"
+        "--demo",
+        action="store_true",
+        help="Run quick demo (3 turns with context dependency)",
     )
     parser.add_argument(
         "--help-detailed", action="store_true", help="Show detailed help"
@@ -446,17 +484,8 @@ def main():
         show_help()
         return
 
-    if not args.demo and not args.full:
-        print(">> Ragas Multi-Turn Conversation Evaluation")
-        print("==========================================")
-        print()
-        print("Please specify mode:")
-        print("  --demo    Quick demo (2 turns)")
-        print("  --full    Full evaluation (9 turns)")
-        print("  --help-detailed    Show detailed help")
-        print()
-        print("Example: python ragas_multi_turn_evaluation.py --demo")
-        return
+    # Default behavior: run full evaluation if no specific mode specified
+    run_full_evaluation = not args.demo
 
     try:
         evaluator = MultiAgentRagasEvaluator()
@@ -466,10 +495,11 @@ def main():
             success = evaluator.run_demo()
             if success:
                 print(
-                    "\n[TIP] For full evaluation, run: python ragas_multi_turn_evaluation.py --full"
+                    "\n[TIP] For full evaluation with 15 turns testing query enhancement:"
                 )
+                print("       python ragas_multi_turn_evaluation.py")
 
-        elif args.full:
+        elif run_full_evaluation:
             print("Running Full Evaluation Mode...")
 
             # Test API connection first
@@ -488,7 +518,7 @@ def main():
             # Run full evaluation
             results = evaluator.run_full_evaluation()
             print(
-                f"\n[DONE] Full evaluation completed! Check benchmark_results/ for detailed results."
+                f"\n[DONE] Full evaluation completed! Check validation/result/ for detailed results."
             )
 
     except ValueError as e:
